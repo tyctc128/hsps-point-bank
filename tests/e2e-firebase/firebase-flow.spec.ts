@@ -1,6 +1,6 @@
 // Firebase 版完整流程：老師與學生各用獨立的瀏覽器（= 不同裝置），驗證跨裝置即時同步
 import { test, expect, type Browser, type Page } from '@playwright/test'
-import { dialogOk, giveAll, login, rosterXlsx, shot, STUDENT_PW } from '../e2e/helpers'
+import { dialogOk, fillPayCode, giveAll, login, rosterXlsx, shot, STUDENT_PW } from '../e2e/helpers'
 import { E2E_TEACHER_PW } from './global-setup'
 
 async function newDevice(browser: Browser, account: string, password = STUDENT_PW): Promise<Page> {
@@ -63,7 +63,7 @@ test('Firebase：教師登入 → 匯入名冊 → 批次加點 → 兩台裝置
   // 同一個收款碼不能再用
   const other = await newDevice(browser, 'e03')
   await other.goto('/#/pay')
-  await other.getByTestId('pay-code').fill(code)
+  await fillPayCode(other, code)
   await other.getByRole('button', { name: '下一步' }).click()
   await expect(other.getByRole('alert')).toContainText('已使用或已失效')
 

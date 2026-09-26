@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { setupTeacher, importRoster, openAs, giveAll, dialogOk, shot } from './helpers'
+import { setupTeacher, importRoster, openAs, giveAll, dialogOk, shot, fillPayCode } from './helpers'
 
 test('QR 轉帳完整流程：收款 → 輸入代碼付款 → 雙方即時看到 → 教師核准 → 雙方明細一致', async ({ page, context }) => {
   await setupTeacher(page)
@@ -19,7 +19,7 @@ test('QR 轉帳完整流程：收款 → 輸入代碼付款 → 雙方即時看�
   // 付款方 e02（陳二）：沒有鏡頭時預設顯示輸入代碼
   const payer = await openAs(context, 'e02')
   await payer.getByTestId('go-pay').click()
-  await payer.getByTestId('pay-code').fill(`${code.slice(0, 4).toLowerCase()} ${code.slice(4)}`)
+  await fillPayCode(payer, `${code.slice(0, 4).toLowerCase()} ${code.slice(4)}`)
   await payer.getByRole('button', { name: '下一步' }).click()
   await expect(payer.getByTestId('pay-recipient')).toHaveText('林一（1 號）')
   await payer.getByTestId('pay-amount').fill('200')
@@ -88,7 +88,7 @@ test('同一個收款碼不能用兩次；不能付款給自己', async ({ page,
   await self.getByLabel('密碼').fill('pass1234')
   await self.getByRole('button', { name: '登入' }).click()
   await self.goto('/#/pay')
-  await self.getByTestId('pay-code').fill(code)
+  await fillPayCode(self, code)
   await self.getByRole('button', { name: '下一步' }).click()
   await expect(self.getByRole('alert')).toContainText('不能付款給自己')
 
@@ -104,7 +104,7 @@ test('同一個收款碼不能用兩次；不能付款給自己', async ({ page,
 
   const b = await openAs(context, 'e05')
   await b.goto('/#/pay')
-  await b.getByTestId('pay-code').fill(code)
+  await fillPayCode(b, code)
   await b.getByRole('button', { name: '下一步' }).click()
   await expect(b.getByRole('alert')).toContainText('已使用或已失效')
 })

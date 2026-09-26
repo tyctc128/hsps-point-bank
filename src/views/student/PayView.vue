@@ -16,7 +16,8 @@ type Step = 'scan' | 'form' | 'done'
 const route = useRoute()
 const router = useRouter()
 const step = ref<Step>('scan')
-const mode = ref<'camera' | 'manual'>('manual')
+// 偵測鏡頭完成前不顯示輸入框，避免學生打字到一半畫面切換成相機
+const mode = ref<'detecting' | 'camera' | 'manual'>('detecting')
 const hasCamera = ref(false)
 const manual = ref('')
 const scanError = ref('')
@@ -124,7 +125,8 @@ onMounted(async () => {
   if (c) {
     router.replace('/pay')
     await lookup(c)
-    return
+    if (step.value === 'form') return
+    // 連結中的代碼無效：改顯示輸入框，讓學生重新輸入
   }
   try {
     const { default: QrScanner } = await import('qr-scanner')
@@ -133,6 +135,7 @@ onMounted(async () => {
     hasCamera.value = false
   }
   if (hasCamera.value && step.value === 'scan') startCamera()
+  else mode.value = 'manual'
 })
 
 onUnmounted(stopCamera)
@@ -151,6 +154,7 @@ onUnmounted(stopCamera)
         <button class="chip" :class="{ on: mode === 'camera' }" type="button" @click="startCamera"><Icon name="camera" :size="16" />掃描 QR 碼</button>
         <button class="chip" :class="{ on: mode === 'manual' }" type="button" @click="useManual"><Icon name="keyboard" :size="16" />輸入代碼</button>
       </div>
+      <p v-if="mode === 'detecting'" class="muted">正在準備相機…</p>
       <div v-show="mode === 'camera'" class="cam">
         <video ref="video" muted playsinline />
       </div>

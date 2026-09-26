@@ -94,3 +94,12 @@ export async function balanceOn(page: Page): Promise<string> {
   await page.goto('/#/')
   return (await page.getByTestId('balance').textContent())?.trim() ?? ''
 }
+
+/** 在付款頁輸入收款代碼：有鏡頭的裝置會先開相機，需要先切換到「輸入代碼」（與真人操作相同） */
+export async function fillPayCode(page: Page, code: string) {
+  const input = page.getByTestId('pay-code')
+  const chip = page.getByRole('button', { name: '輸入代碼' })
+  await expect(input.or(chip).first()).toBeVisible()
+  if (!(await input.isVisible())) await chip.click()
+  await input.fill(code)
+}
