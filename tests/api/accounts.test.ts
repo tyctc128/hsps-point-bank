@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { makeWorld, expectCode, FB, STUDENT_PW } from './helpers'
+import { makeWorld, expectCode, eventually, FB, STUDENT_PW } from './helpers'
 import { reconcile } from '../../src/domain/ledger'
 
 describe('批次停用 / 啟用與刪除學生帳號', () => {
@@ -21,8 +21,10 @@ describe('批次停用 / 啟用與刪除學生帳號', () => {
     expect(r.deleted).toBe(2)
     expect((await w.teacher.listStudents()).map((u) => u.account)).toEqual(['s03', 's04'])
     await expectCode(w.device().login('s01', STUDENT_PW), 'INVALID_CREDENTIALS')
-    const e = await s1.getMe().then(() => null, (err) => err)
-    expect(['PERMISSION_DENIED', 'UNAUTHENTICATED']).toContain(e?.code)
+    await eventually(async () => {
+      const e = await s1.getMe().then(() => null, (err) => err)
+      expect(['PERMISSION_DENIED', 'UNAUTHENTICATED']).toContain(e?.code)
+    })
     if (!FB) {
       const db = JSON.parse(w.storage.getItem('test-db')!)
       expect(db.creds.s01).toBeUndefined()

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MockApi } from '../../src/api/mock/mockApi'
 import { MemoryStorage, MockStore } from '../../src/api/mock/store'
-import { makeWorld, expectCode, FB, STUDENT_PW, TEACHER_PW } from './helpers'
+import { makeWorld, expectCode, eventually, FB, STUDENT_PW, TEACHER_PW } from './helpers'
 
 describe('帳號與登入', () => {
   it.skipIf(FB)('全新系統需要先建立教師帳號，且只能建立一次', async () => {
@@ -66,8 +66,11 @@ describe('帳號與登入', () => {
     const w = await makeWorld(2)
     const s1 = await w.as('s01')
     await w.teacher.updateStudent(w.byAccount('s01').uid, { active: false })
-    const e = await s1.getMe().then(() => null, (err) => err)
-    expect(['ACCOUNT_DISABLED', 'UNAUTHENTICATED']).toContain(e?.code) // Firebase：即時監聽可能已先將其登出
+    // Firebase：已登入的裝置在即時同步收到停用通知後（通常 1 秒內）被拒絕，並可能已先被登出
+    await eventually(async () => {
+      const e = await s1.getMe().then(() => null, (err) => err)
+      expect(['ACCOUNT_DISABLED', 'UNAUTHENTICATED']).toContain(e?.code)
+    })
     await expectCode(w.device().login('s01', STUDENT_PW), 'ACCOUNT_DISABLED')
   })
 
