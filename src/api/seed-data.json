@@ -1,0 +1,14 @@
+{
+  "presets": [
+    { "kind": "add", "name": "表現優良", "description": "上課認真、主動學習", "amount": 3000, "icon": "star", "sortOrder": 1, "active": true, "showToStudents": true },
+    { "kind": "add", "name": "熱心服務", "description": "主動幫忙班級事務", "amount": 1000, "icon": "heart", "sortOrder": 2, "active": true, "showToStudents": true },
+    { "kind": "add", "name": "作業全對", "description": "作業全部正確", "amount": 500, "icon": "check", "sortOrder": 3, "active": true, "showToStudents": true },
+    { "kind": "deduct", "name": "午休看課外書", "description": "午休時間可以安靜看自己喜歡的書", "amount": 800, "icon": "book", "sortOrder": 4, "active": true, "showToStudents": true },
+    { "kind": "deduct", "name": "自選座位一天", "description": "選一個喜歡的座位坐一天", "amount": 1500, "icon": "seat", "sortOrder": 5, "active": true, "showToStudents": true },
+    { "kind": "deduct", "name": "免寫一次回家作業", "description": "指定一項回家作業不用寫", "amount": 3000, "icon": "gift", "sortOrder": 6, "active": true, "showToStudents": true },
+    { "kind": "deduct", "name": "忘記帶作業", "description": "", "amount": 300, "icon": "alert", "sortOrder": 7, "active": true, "showToStudents": false }
+  ],
+  "groupColors": ["#06C755", "#2F80ED", "#F2994A", "#9B51E0", "#EB5757", "#00A3A3", "#C9A227", "#6B7A72"],
+  "groupCount": 8,
+  "settings": { "className": "HSPS 班級", "codeTtlMinutes": 3, "championAmount": 500, "runnerUpAmount": 300 }
+}

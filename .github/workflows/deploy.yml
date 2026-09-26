@@ -1,0 +1,69 @@
+name: 測試並部署到 GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4       # Firebase 模擬器需要 Java
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run typecheck
+      - name: 單元 / 整合 / 權限 / 原子性測試（模擬資料庫）
+        run: npm test
+      - name: Firebase 模擬器：權限規則 + 整合測試
+        run: npm run test:firebase
+      - run: npx playwright install --with-deps chromium webkit
+      - name: 端對端測試（模擬資料庫：桌面 Chromium + iPad WebKit）
+        run: npm run test:e2e
+      - name: 端對端測試（Firebase 模擬器）
+        run: npm run test:e2e:firebase
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results/
+            playwright-report/
+
+  deploy:
+    needs: test          # 所有測試通過才部署
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: 正式建置（Firebase 版，使用 .env.production）
+        run: npx vite build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

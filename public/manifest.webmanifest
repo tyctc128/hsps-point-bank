@@ -1,0 +1,11 @@
+{
+  "name": "HSPS 點數銀行",
+  "short_name": "點數銀行",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F6F8F6",
+  "theme_color": "#06C755",
+  "icons": [
+    { "src": "logo.png", "sizes": "447x447", "type": "image/png", "purpose": "any" }
+  ]
+}

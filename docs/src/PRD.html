@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>HSPS 點數銀行 PRD</title>
+<link rel="stylesheet" href="doc.css">
+</head>
+<body>
+<span class="doc-title-string">HSPS 點數銀行｜產品需求文件 PRD v1.3</span>
+
+<!-- ================= COVER ================= -->
+<div class="cover">
+  <div class="cover-top">
+    <img src="logo.png" alt="HSPS logo">
+    <div class="org">HSPS 班級點數銀行<small>CLASS POINT BANK</small></div>
+  </div>
+  <div class="cover-mid">
+    <span class="kicker">PRD · 產品需求文件</span>
+    <h1>HSPS 點數銀行<br>產品需求文件</h1>
+    <div class="sub">Product Requirements Document</div>
+    <div class="cover-bar"></div>
+    <table class="meta-table">
+      <tr><td>版本</td><td>v1.3</td></tr>
+      <tr><td>日期</td><td>2026 年 9 月 26 日</td></tr>
+      <tr><td>適用範圍</td><td>單一班級：學生 31 人、教師 1 人</td></tr>
+      <tr><td>相關文件</td><td>HSPS 點數銀行 系統設計文件（SDD）v1.3</td></tr>
+      <tr><td>狀態</td><td>已完成第一版實作（模擬資料庫），待移植 Firebase</td></tr>
+    </table>
+  </div>
+  <img class="cover-logo-big" src="logo.png" alt="">
+</div>
+
+<!-- ================= TOC ================= -->
+<div class="toc">
+  <h2>目錄</h2>
+  <ol>
+    <li><span class="n">1</span>文件資訊與修訂紀錄</li>
+    <li><span class="n">2</span>背景、目標與非目標</li>
+    <li><span class="n">3</span>使用者角色與使用情境</li>
+    <li><span class="n">4</span>名詞定義</li>
+    <li><span class="n">5</span>功能總覽與優先順序</li>
+    <li><span class="n">6</span>學生端功能需求</li>
+    <li><span class="n">7</span>教師端功能需求</li>
+    <li><span class="n">8</span>業務規則</li>
+    <li><span class="n">9</span>主要使用流程</li>
+    <li><span class="n">10</span>介面與視覺規範</li>
+    <li><span class="n">11</span>非功能需求</li>
+    <li><span class="n">12</span>範圍外項目與未來規劃</li>
+    <li><span class="n">13</span>驗收與上線計畫</li>
+    <li><span class="n">14</span>待決事項</li>
+  </ol>
+</div>
+
+<!-- ================= 1 ================= -->
+<section class="chapter" style="page-break-before:auto">
+<h2><span class="n">1</span>文件資訊與修訂紀錄</h2>
+<table class="t">
+  <tr><th style="width:18%">項目</th><th>內容</th></tr>
+  <tr><td>產品名稱</td><td>HSPS 點數銀行（Class Point Bank）</td></tr>
+  <tr><td>產品負責人</td><td>班級導師（系統唯一教師）</td></tr>
+  <tr><td>目標使用者</td><td>班級學生 31 人（一人一台 iPad，也可能使用電腦）、教師 1 人（電腦）</td></tr>
+  <tr><td>部署方式</td><td>GitHub Pages 靜態網站 + Firebase（免費 Spark 方案）</td></tr>
+</table>
+<table class="t">
+  <tr><th style="width:14%">版本</th><th style="width:18%">日期</th><th>說明</th></tr>
+  <tr><td>v1.0</td><td>2026-09-26</td><td>初版草案：整合需求討論結果（登入、點數明細、預設事件、QR 轉帳審核、批次加扣點、分組與小組獎勵、沖正機制）</td></tr>
+  <tr><td>v1.1</td><td>2026-09-26</td><td>新增：學生可用電腦操作；「點數規則與小確幸」前台頁與後台管理；點數異動全有全無（原子性）規則；轉帳雙方皆可查看完整交易細目；移除交易中的餘額快照以保護隱私</td></tr>
+  <tr><td>v1.2</td><td>2026-09-26</td><td>「小特權」更名為「小確幸」；學生以名冊帳號登入（相容老師現有 account.xlsx：no / account / passwd / name）；第一版以模擬資料庫實作，Firebase 移植列為下一階段</td></tr>
+  <tr><td>v1.3</td><td>2026-09-26</td><td>學生總覽新增勾選與批次操作：批次停用、批次啟用、批次刪除學生帳號（交易紀錄保留）</td></tr>
+</table>
+</section>
+
+<!-- ================= 2 ================= -->
+<section class="chapter cont">
+<h2><span class="n">2</span>背景、目標與非目標</h2>
+<h3>2.1 背景</h3>
+<p>班級目前以點數作為正向行為增強與班級經營工具。紙本或試算表記錄難以即時查詢、容易出錯，學生之間的點數交換也缺乏可追溯的紀錄。本產品將點數制度數位化為「班級銀行」，讓學生隨時查看自己的帳戶，老師集中管理加扣點與審核轉帳，並藉此培養學生的金錢與理財概念。</p>
+<h3>2.2 產品目標</h3>
+<table class="t">
+  <tr><th style="width:8%" class="c">#</th><th>目標</th><th style="width:36%">衡量方式</th></tr>
+  <tr><td class="c">G1</td><td>學生可隨時用 iPad 查看自己的點數餘額與完整交易明細</td><td>學生登入後 3 秒內看到餘額；明細與後台一致</td></tr>
+  <tr><td class="c">G2</td><td>老師能快速完成日常加扣點，尤其是每日小組獎勵</td><td>每日小組獎勵在 30 秒內完成發放</td></tr>
+  <tr><td class="c">G3</td><td>學生之間可安全轉帳，且每筆都經老師審核</td><td>未核准的轉帳不影響任何餘額；零重複扣款</td></tr>
+  <tr><td class="c">G4</td><td>所有點數異動皆可追溯、不可竄改</td><td>帳本只增不刪；任一帳戶的交易加總等於餘額</td></tr>
+  <tr><td class="c">G5</td><td>零營運成本、老師可自行維護</td><td>在 Firebase 免費額度內運作；無需架設伺服器</td></tr>
+</table>
+<h3>2.3 非目標（本版不做）</h3>
+<ul>
+  <li>學校統一登入（SSO）整合：本系統使用獨立帳號密碼。</li>
+  <li>轉帳金額或次數限制：由老師逐筆審核取代。</li>
+  <li>多班級、多教師權限管理。</li>
+  <li>與真實金錢或任何金流的連結。</li>
+  <li>與「另一個系統」的自動串接（待確認後另案評估）。</li>
+</ul>
+</section>
+
+<!-- ================= 3 ================= -->
+<section class="chapter">
+<h2><span class="n">3</span>使用者角色與使用情境</h2>
+<h3>3.1 角色</h3>
+<table class="t">
+  <tr><th style="width:12%">角色</th><th style="width:10%" class="c">人數</th><th style="width:20%">裝置</th><th>主要任務</th></tr>
+  <tr><td>學生</td><td class="c">31</td><td>個人 iPad（一人一台）為主；亦可使用電腦瀏覽器</td><td>查看餘額與明細、查看點數規則與小確幸、產生收款 QR 碼、掃碼付款</td></tr>
+  <tr><td>教師</td><td class="c">1</td><td>電腦（Chrome / Edge），亦可用 iPad</td><td>加扣點、批次加扣點、小組獎勵、審核轉帳、沖正、管理學生與分組、匯出報表</td></tr>
+</table>
+<h3>3.2 典型使用情境</h3>
+<div class="box"><div class="h">情境 A：每日小組獎勵</div>
+每天另一個系統公布小組名次後，老師打開「小組獎勵」頁，選擇冠軍組（可並列多組）與亞軍組，取消請假學生，按下「確認發放」，冠亞軍組每位學生立即入帳。</div>
+<div class="box"><div class="h">情境 B：學生之間買賣</div>
+小華做了手作書籤賣給小明。小華在 iPad 按「收款」出示一次性 QR 碼，小明按「付款」掃描，輸入 200 點、分類「買東西」、目的「買手作書籤」並送出。老師在後台核准後，點數才實際轉移。</div>
+<div class="box"><div class="h">情境 C：表現優良 / 享用福利</div>
+老師在課堂上選擇學生，點一下「表現優良 +3,000」即完成加點；學生使用「午休看課外書」福利時，老師點「享用小確幸 −800」扣點。</div>
+<div class="box"><div class="h">情境 D：誤扣更正</div>
+老師發現誤扣某生 300 點，在交易紀錄對該筆按「沖正」，系統產生一筆反向交易 +300，原交易標示「已沖正」，學生在明細中可看到完整經過。</div>
+</section>
+
+<!-- ================= 4 ================= -->
+<section class="chapter cont">
+<h2><span class="n">4</span>名詞定義</h2>
+<table class="t">
+  <tr><th style="width:18%">名詞</th><th>定義</th></tr>
+  <tr><td>點數</td><td>系統內的虛擬貨幣，一律為正整數，單位「點」。</td></tr>
+  <tr><td>帳戶 / 餘額</td><td>每位學生一個帳戶；餘額為目前可用點數，不可為負數。</td></tr>
+  <tr><td>交易</td><td>任何點數異動的紀錄，包含加點、扣點、轉帳、小組獎勵、沖正。</td></tr>
+  <tr><td>預設事件</td><td>老師預先設定的常用加扣點項目，例如「表現優良 +3,000」。</td></tr>
+  <tr><td>收款碼</td><td>收款方產生的一次性 QR 碼，限時有效且只能被使用一次。</td></tr>
+  <tr><td>轉帳申請</td><td>付款方送出、尚待老師審核的轉帳；核准前不影響任何餘額。</td></tr>
+  <tr><td>沖正</td><td>以一筆「反向交易」抵銷一筆錯誤交易；原交易保留並標示「已沖正」。</td></tr>
+  <tr><td>批次</td><td>同一次操作對多位學生產生的一組交易，共用批次編號，可整批沖正。</td></tr>
+  <tr><td>分組 / 小組</td><td>老師手動將學生分組，每位學生同時只屬於一組。</td></tr>
+  <tr><td>小組獎勵</td><td>依每日小組名次，對冠軍組與亞軍組的組員批次加點；名次可並列。</td></tr>
+</table>
+</section>
+
+<!-- ================= 5 ================= -->
+<section class="chapter">
+<h2><span class="n">5</span>功能總覽與優先順序</h2>
+<p class="small muted">優先順序：<span class="pill p0">P0</span> 首次上線必備　<span class="pill p1">P1</span> 首次上線應有，可稍後補上　<span class="pill p2">P2</span> 未來版本</p>
+<table class="t">
+  <tr><th style="width:12%">編號</th><th style="width:26%">功能</th><th>摘要</th><th style="width:9%" class="c">優先</th></tr>
+  <tr><td colspan="4" style="background:#E8F8EE;font-weight:700;color:#0B3D22">學生端（iPad 為主，亦支援電腦）</td></tr>
+  <tr><td>F-S01</td><td>登入 / 登出</td><td>學號 + 密碼登入，保持登入狀態</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-S02</td><td>首頁</td><td>餘額、組別、收款 / 付款入口、最近交易、審核中提示</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-S03</td><td>交易明細</td><td>完整明細、篩選、單筆詳情、狀態標示</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-S04</td><td>收款（一次性 QR 碼）</td><td>隨機產生、限時、單次有效、即時通知</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-S05</td><td>付款（掃碼轉帳申請）</td><td>掃碼、確認收款人、金額、分類、目的</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-S06</td><td>修改密碼</td><td>學生自行修改密碼</td><td class="c"><span class="pill p1">P1</span></td></tr>
+  <tr><td>F-S07</td><td>點數規則與小確幸</td><td>顯示老師設定的加點項目與小確幸（名稱、說明、點數）</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td colspan="4" style="background:#E8F8EE;font-weight:700;color:#0B3D22">教師端（電腦後台）</td></tr>
+  <tr><td>F-T01</td><td>儀表板</td><td>待審核數、今日加扣點統計、全班總點數</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T02</td><td>轉帳審核</td><td>核准 / 駁回 / 批次核准，核准時檢查餘額</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T03</td><td>學生總覽</td><td>全班帳戶列表、個人明細、批次停用 / 啟用 / 刪除帳號</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T04</td><td>個別加扣點</td><td>預設事件一鍵加扣點、自訂金額</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T05</td><td>批次加扣點</td><td>多選學生、依組別選取、整批沖正</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T06</td><td>小組獎勵</td><td>冠軍 / 亞軍（可並列）、請假排除、重複發放提醒</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T07</td><td>交易紀錄與匯出</td><td>全部交易、多條件篩選、匯出 Excel / CSV</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T08</td><td>沖正</td><td>單筆沖正、整批沖正，不刪除原交易</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T09</td><td>預設事件與小確幸管理</td><td>新增加點項目與小確幸、設定點數、是否顯示於學生前台</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T10</td><td>分組管理</td><td>建立組別、拖拉分組</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T11</td><td>學生帳號管理</td><td>Excel / CSV 名冊匯入、停用、重設密碼</td><td class="c"><span class="pill p0">P0</span></td></tr>
+  <tr><td>F-T12</td><td>系統設定</td><td>QR 有效時間、小組獎勵預設點數</td><td class="c"><span class="pill p1">P1</span></td></tr>
+  <tr><td>F-T13</td><td>小組獎勵歷史</td><td>每日得獎紀錄、各組累計得獎次數</td><td class="c"><span class="pill p1">P1</span></td></tr>
+  <tr><td>F-T14</td><td>對帳檢查</td><td>檢查每位學生交易加總是否等於餘額</td><td class="c"><span class="pill p1">P1</span></td></tr>
+  <tr><td>F-T15</td><td>全資料備份</td><td>一鍵匯出全部資料（JSON / Excel）</td><td class="c"><span class="pill p1">P1</span></td></tr>
+</table>
+</section>
+
+<!-- ================= 6 ================= -->
+<section class="chapter">
+<h2><span class="n">6</span>學生端功能需求</h2>
+<div class="box"><div class="h">裝置支援</div>學生端以 iPad 為主要裝置，但所有學生頁面也必須能在電腦瀏覽器（Chrome / Edge / Safari）上完整操作。版面依螢幕寬度自動調整：iPad 直向為單欄，iPad 橫向與電腦為雙欄。電腦沒有鏡頭或無法掃描時，付款改用「輸入 8 碼收款代碼」。</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-S01</span><span class="fname">登入 / 登出</span><span class="pill p0">P0</span></div>
+  <div class="lbl">需求描述</div>
+  <ul>
+    <li>登入畫面輸入「帳號」與「密碼」。帳號為名冊中的學生帳號（例如 hs 開頭的學號帳號），不分大小寫。</li>
+    <li>因一人一台 iPad，登入狀態保持（關閉 Safari 後再開仍為登入），直到手動登出。</li>
+    <li>已停用的帳號無法登入，並顯示「帳號已停用，請洽老師」。</li>
+    <li>忘記密碼：畫面提示「請洽老師重設」。</li>
+  </ul>
+  <div class="lbl">驗收條件</div>
+  <ul>
+    <li>輸入正確帳號與密碼可進入首頁；錯誤時顯示「帳號或密碼錯誤」，不透露是哪一項錯誤。</li>
+    <li>連續輸錯 5 次，該帳號鎖定 1 分鐘。</li>
+    <li>學生帳號無法進入任何教師頁面（直接輸入網址也會被導回首頁）。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-S02</span><span class="fname">首頁</span><span class="pill p0">P0</span></div>
+  <div class="lbl">需求描述</div>
+  <ul>
+    <li>大字顯示目前餘額（千分位），以及姓名、座號、組別。</li>
+    <li>本週收入與本週支出小計。</li>
+    <li>若有審核中的轉帳，顯示「N 筆轉帳等待老師審核」。</li>
+    <li>「收款」「付款」兩顆大按鈕（觸控目標 ≥ 44px，建議 ≥ 120px 高）。</li>
+    <li>最近 5 筆交易，可點「查看全部」進入明細。</li>
+  </ul>
+  <div class="lbl">驗收條件</div>
+  <ul>
+    <li>老師加扣點或核准轉帳後，學生首頁餘額在 3 秒內自動更新，無需重新整理。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-S03</span><span class="fname">交易明細</span><span class="pill p0">P0</span></div>
+  <div class="lbl">需求描述</div>
+  <ul>
+    <li>依時間由新到舊列出與本人相關的所有交易：加點、扣點、轉入、轉出、小組獎勵、沖正。</li>
+    <li>每筆顯示：日期時間、摘要（事件名稱或對象）、分類與事由、金額（收入綠色 +、支出紅色 −）、交易後結餘（由系統依本人明細推算）。</li>
+    <li>篩選：全部 / 收入 / 支出 / 審核中。</li>
+    <li>狀態標示：審核中（灰底標籤）、已駁回（附駁回原因）、已沖正（刪除線）。</li>
+    <li>點選單筆可查看詳情：交易編號、經手老師、核准時間。</li>
+    <li><b>轉帳交易的雙方（付款人與收款人）都能看到完整細目</b>：
+      <ul>
+        <li>方向（轉出 / 轉入）</li>
+        <li>對象的姓名與座號</li>
+        <li>分類與事由（目的）</li>
+        <li>金額</li>
+        <li>狀態：審核中、已完成、已駁回（含駁回原因）、已沖正</li>
+        <li>送出時間與核准時間</li>
+      </ul>
+    </li>
+    <li>收款人在老師核准前，也能在明細中看到「審核中」的轉入申請。</li>
+    <li>基於隱私，雙方都看不到對方的餘額。</li>
+    <li>一次載入 30 筆，捲動到底自動載入更多。</li>
+  </ul>
+  <div class="lbl">驗收條件</div>
+  <ul>
+    <li>學生只能看到自己相關的交易，看不到其他同學之間的交易。</li>
+    <li>明細中已完成交易的加總等於目前餘額。</li>
+    <li>付款人與收款人對同一筆轉帳看到的對象、事由、金額、狀態完全一致。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-S04</span><span class="fname">收款（一次性 QR 碼）</span><span class="pill p0">P0</span></div>
+  <div class="lbl">需求描述</div>
+  <ul>
+    <li>按「收款」後，系統隨機產生一組新的收款碼並以 QR 碼全螢幕顯示，同時顯示收款人姓名與 8 碼文字代碼（供手動輸入備援）。</li>
+    <li>每次都重新產生；有效時間預設 3 分鐘（可由老師設定），畫面顯示倒數。</li>
+    <li>收款碼只能被使用一次。被使用後，畫面即時顯示「○○○ 已送出 ○○ 點付款申請，等待老師審核」，此碼作廢。</li>
+    <li>逾時未使用則顯示「已失效」，並提供「重新產生」按鈕。</li>
+    <li>離開收款頁時，未使用的收款碼立即作廢。</li>
+  </ul>
+  <div class="lbl">驗收條件</div>
+  <ul>
+    <li>同一 QR 碼被第二人掃描時，顯示「此收款碼已使用或已失效」，無法送出。</li>
+    <li>截圖轉傳的 QR 碼在過期後無法使用。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-S05</span><span class="fname">付款（掃碼轉帳申請）</span><span class="pill p0">P0</span></div>
+  <div class="lbl">需求描述</div>
+  <ul>
+    <li>按「付款」開啟相機掃描 QR 碼：iPad 使用後鏡頭，電腦使用視訊鏡頭；首次使用時請求相機權限，拒絕時提示如何開啟。</li>
+    <li>提供「輸入收款代碼」：收款畫面上的 8 碼代碼可直接輸入。電腦沒有鏡頭時，預設顯示此方式。</li>
+    <li>掃描成功後顯示收款人姓名與座號，請付款人確認對象。</li>
+    <li>輸入欄位：
+      <ul>
+        <li>金額（必填，正整數，不可超過目前餘額）</li>
+        <li>分類（必選）：買東西 / 還錢 / 贈送 / 其他</li>
+        <li>目的（必填，最多 50 字）</li>
+      </ul>
+    </li>
+    <li>送出前顯示確認畫面：「確定付給 ○○○ 200 點？需老師核准後才生效」。</li>
+    <li>送出後建立轉帳申請，狀態為「審核中」，付款方餘額暫不變動。</li>
+  </ul>
+  <div class="lbl">驗收條件</div>
+  <ul>
+    <li>不可付款給自己；金額為 0、負數、小數或超過餘額時無法送出。</li>
+    <li>送出成功後，雙方明細皆出現「審核中」紀錄。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-S06</span><span class="fname">修改密碼</span><span class="pill p1">P1</span></div>
+  <ul>
+    <li>輸入舊密碼與新密碼（至少 6 碼）即可修改。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-S07</span><span class="fname">點數規則與小確幸</span><span class="pill p0">P0</span></div>
+  <div class="lbl">需求描述</div>
+  <ul>
+    <li>學生前台獨立頁面，首頁提供入口。</li>
+    <li>分兩區顯示老師設定為「顯示於前台」的項目：
+      <ul>
+        <li><b>小確幸</b>：可以用點數換的福利，例如「午休看課外書 800 點」。</li>
+        <li><b>賺點方式</b>：可以獲得點數的行為，例如「表現優良 +3,000」。</li>
+      </ul>
+    </li>
+    <li>每個項目顯示名稱、說明、點數與圖示，依老師設定的順序排列。</li>
+    <li>小確幸顯示「我的點數是否足夠」提示，例如「還差 300 點」。</li>
+    <li>老師在後台新增、修改或下架項目後，前台即時更新。</li>
+    <li>本版只做展示；要使用小確幸時，由學生向老師提出，老師在後台扣點。學生自行線上申請兌換列為未來功能（福利商店）。</li>
+  </ul>
+  <div class="lbl">驗收條件</div>
+  <ul>
+    <li>老師新增小確幸並勾選「顯示於前台」後，學生頁面 3 秒內出現。</li>
+    <li>未勾選顯示或已停用的項目，學生看不到（直接查詢資料庫也看不到）。</li>
+  </ul>
+</div>
+</section>
+
+<!-- ================= 7 ================= -->
+<section class="chapter">
+<h2><span class="n">7</span>教師端功能需求</h2>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T01</span><span class="fname">儀表板</span><span class="pill p0">P0</span></div>
+  <ul>
+    <li>統計卡片：待審核轉帳數（紅點提醒）、今日發出點數、今日扣除點數、全班總點數。</li>
+    <li>待審核清單的前幾筆，可直接核准或駁回。</li>
+    <li>今日小組獎勵快捷區塊，顯示今天是否已發放。</li>
+    <li>左側選單所有頁面都顯示待審核數量徽章。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T02</span><span class="fname">轉帳審核</span><span class="pill p0">P0</span></div>
+  <div class="lbl">需求描述</div>
+  <ul>
+    <li>待審核清單欄位：送出時間、付款人、收款人、分類、目的、金額、付款人目前餘額。</li>
+    <li>付款人餘額不足的申請以警示色標示，且「核准」按鈕不可按。</li>
+    <li>操作：
+      <ul>
+        <li>核准</li>
+        <li>駁回（可選填駁回原因，學生看得到）</li>
+        <li>勾選多筆後「核准所選」</li>
+      </ul>
+    </li>
+    <li>核准時系統重新檢查付款人餘額；付款人扣點、收款人加點、狀態更新三者同時完成。</li>
+    <li>可篩選分類與學生。</li>
+  </ul>
+  <div class="lbl">驗收條件</div>
+  <ul>
+    <li>同一筆申請重複按核准，只會生效一次。</li>
+    <li>同一學生多筆申請總額超過餘額時，逐筆核准到餘額不足的那筆會被擋下並提示。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T03</span><span class="fname">學生總覽</span><span class="pill p0">P0</span></div>
+  <ul>
+    <li>表格欄位：座號、姓名、學號、組別、餘額、本週收支、帳號狀態；可排序、搜尋、依組別篩選。</li>
+    <li>點入個人頁：完整明細（與學生端相同，但含全部欄位）、快速加扣點、重設密碼、停用帳號、刪除帳號。</li>
+    <li><b>批次操作</b>：每列有勾選框，表頭可全選目前列出的學生（可搭配搜尋與組別篩選）。勾選後出現操作列：
+      <ul>
+        <li><b>批次停用 / 啟用</b>：停用後無法登入與收付款，點數與紀錄保留，可隨時再啟用。</li>
+        <li><b>批次刪除</b>：刪除帳號與登入資料，<b>交易紀錄保留</b>（其他同學的明細仍顯示對象姓名與座號）。確認視窗會列出學生與剩餘點數，並需輸入「刪除」兩字才執行；整批一次完成（全有全無）。</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T04</span><span class="fname">個別加扣點</span><span class="pill p0">P0</span></div>
+  <ul>
+    <li>選擇學生後，畫面列出預設事件按鈕（加點綠色、扣點紅色），點一下即完成，並顯示「已為王小明 +3,000（表現優良）」與「復原」捷徑（復原 = 立即沖正）。</li>
+    <li>自訂：輸入金額、加或扣、原因（必填）。</li>
+    <li>扣點不可使餘額小於 0；超過時提示「餘額不足，目前 500 點」。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T05</span><span class="fname">批次加扣點</span><span class="pill p0">P0</span></div>
+  <ul>
+    <li>學生勾選清單，支援：全選、取消全選、依組別一鍵勾選（可多組）。</li>
+    <li>套用預設事件或自訂金額與原因。</li>
+    <li>送出前預覽：人數、每人點數、合計；批次扣點時列出餘額不足的學生，老師可選擇排除他們後繼續。</li>
+    <li>同一批次的交易共用批次編號，可在交易紀錄中整批沖正。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T06</span><span class="fname">小組獎勵</span><span class="pill p0">P0</span></div>
+  <div class="lbl">需求描述</div>
+  <ul>
+    <li>設定「冠軍」與「亞軍」：
+      <ul>
+        <li>兩者皆可複選多組，以支援並列名次。</li>
+        <li>同一組不可同時為冠軍與亞軍。</li>
+      </ul>
+    </li>
+    <li>每人點數：冠軍與亞軍各自有預設值（於系統設定調整，例如冠軍 500、亞軍 300），當次可臨時修改。</li>
+    <li>選定組別後自動列出組員並預設勾選，可取消勾選請假學生。</li>
+    <li>預覽：各名次組數、人數、每人點數、合計點數。</li>
+    <li>發放日期預設今天，可改選過去日期（用於補發）。</li>
+    <li>同一日期已發放過時，提醒「此日期已發放過小組獎勵，確定再發一次？」。</li>
+    <li>學生明細顯示「小組冠軍（第 3 組）+500」；並列時附註「並列冠軍」。</li>
+  </ul>
+  <div class="lbl">驗收條件</div>
+  <ul>
+    <li>冠軍 2 組（共 8 人，其中 1 人請假）每人 500、亞軍 1 組 4 人每人 300 → 產生 11 筆交易，共 4,700 點。</li>
+    <li>整批沖正後，11 位學生餘額皆還原。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T07</span><span class="fname">交易紀錄與匯出</span><span class="pill p0">P0</span></div>
+  <ul>
+    <li>列出全部交易，篩選條件：日期區間、類型、學生、組別、狀態、轉帳分類、批次編號。</li>
+    <li>依目前篩選結果匯出 Excel（.xlsx）或 CSV。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T08</span><span class="fname">沖正</span><span class="pill p0">P0</span></div>
+  <ul>
+    <li>對已完成的交易按「沖正」，填寫原因後，系統產生金額相同、方向相反的沖正交易，並連結原交易；原交易標示「已沖正」。</li>
+    <li>批次交易可選擇「沖正此筆」或「整批沖正」。</li>
+    <li>每筆交易只能沖正一次；沖正交易本身不可再沖正。</li>
+    <li>若沖正會使任一方餘額小於 0（例如收款人已花掉），系統阻擋並顯示原因。</li>
+    <li>審核中的申請不需沖正，直接駁回即可。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T09</span><span class="fname">預設事件與小確幸管理</span><span class="pill p0">P0</span></div>
+  <ul>
+    <li>老師在後台新增、編輯、排序、停用項目，分兩類：
+      <ul>
+        <li><b>加點項目</b>：例如表現優良 +3,000。</li>
+        <li><b>小確幸</b>：扣點項目，例如午休看課外書 800 點。</li>
+      </ul>
+    </li>
+    <li>欄位：類型、名稱、說明（最多 60 字，顯示給學生）、點數、圖示、排序、啟用狀態、<b>是否顯示於學生前台</b>。</li>
+    <li>同一份清單同時用於：
+      <ul>
+        <li>老師加扣點時的一鍵按鈕</li>
+        <li>學生前台的「點數規則與小確幸」頁（F-S07）</li>
+      </ul>
+    </li>
+    <li>也可以建立只給老師用、不顯示於前台的項目，例如「上課講話 −300」。</li>
+    <li>停用的事件不出現在加扣點畫面，但歷史交易仍保留其名稱。</li>
+    <li>初始內建範例：加點項目「表現優良 +3,000、熱心服務 +1,000、作業全對 +500」；小確幸「午休看課外書 800、自選座位一天 1,500、免寫一次回家作業 3,000」；僅老師使用「忘記帶作業 −300」（皆可修改）。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T10</span><span class="fname">分組管理</span><span class="pill p0">P0</span></div>
+  <ul>
+    <li>新增、編輯、排序、停用組別；欄位：組名、代表色。</li>
+    <li>拖拉學生卡片到各組；每位學生同時只屬於一組，也可以不屬於任何組。</li>
+    <li>重新分組不影響歷史交易（交易保存發放當時的組名）。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T11</span><span class="fname">學生帳號管理</span><span class="pill p0">P0</span></div>
+  <ul>
+    <li>Excel（.xlsx）或 CSV 批次匯入，直接相容老師現有的 account.xlsx：no（座號）、account（帳號）、passwd（密碼）、name（姓名），可加「組別」；亦接受中文欄名。
+      <ul>
+        <li>匯入前預覽，並標示錯誤列：重複學號、缺欄位、密碼過短。</li>
+      </ul>
+    </li>
+    <li>單筆新增、編輯姓名與座號。</li>
+    <li>停用或啟用帳號：停用後無法登入，但保留帳戶與紀錄。刪除帳號見 F-T03 批次操作。</li>
+    <li>重設密碼（實作方式見 SDD）。</li>
+    <li>列印帳號密碼小卡（含學號與初始密碼），發給學生。</li>
+  </ul>
+</div>
+
+<div class="feature">
+  <div class="fh"><span class="fid">F-T12 ~ F-T15</span><span class="fname">系統設定、小組獎勵歷史、對帳檢查、全資料備份</span><span class="pill p1">P1</span></div>
+  <ul>
+    <li><b>系統設定</b>：收款碼有效時間（1～10 分鐘，預設 3）；小組冠軍與亞軍預設點數。</li>
+    <li><b>小組獎勵歷史</b>：日曆或列表呈現每日得獎組別；各組累計冠軍與亞軍次數。</li>
+    <li><b>對帳檢查</b>：逐一比對每位學生「已完成交易加總」與「帳戶餘額」，列出不一致者。</li>
+    <li><b>全資料備份</b>：匯出所有學生、交易、分組、設定為 JSON 與 Excel，建議每月備份一次。</li>
+  </ul>
+</div>
+</section>
+
+<!-- ================= 8 ================= -->
+<section class="chapter">
+<h2><span class="n">8</span>業務規則</h2>
+<table class="t">
+  <tr><th style="width:10%">編號</th><th>規則</th></tr>
+  <tr><td>BR-01</td><td>點數一律為正整數；單筆上限 1,000,000 點（防止誤輸入）。</td></tr>
+  <tr><td>BR-02</td><td>任何帳戶餘額不得小於 0。</td></tr>
+  <tr><td>BR-03</td><td>只有教師可以直接改變餘額；學生只能送出轉帳申請。</td></tr>
+  <tr><td>BR-04</td><td>學生轉帳一律需教師核准後才生效；駁回後不影響任何餘額。</td></tr>
+  <tr><td>BR-05</td><td>核准當下重新檢查付款人餘額；不足則無法核准。</td></tr>
+  <tr><td>BR-06</td><td>核准時，付款人扣點、收款人加點、狀態更新須同時成功或同時失敗。</td></tr>
+  <tr><td>BR-07</td><td>一筆申請只能被核准或駁回一次。</td></tr>
+  <tr><td>BR-08</td><td>收款碼隨機產生、限時有效（預設 3 分鐘），只能使用一次；不可付款給自己。</td></tr>
+  <tr><td>BR-09</td><td>帳本只增不刪：任何人（包括教師）都不能刪除或修改已完成交易的金額與對象。</td></tr>
+  <tr><td>BR-10</td><td>錯誤交易以沖正處理；每筆交易只能沖正一次，沖正交易不可再沖正。</td></tr>
+  <tr><td>BR-11</td><td>沖正不得使任何帳戶餘額小於 0。</td></tr>
+  <tr><td>BR-12</td><td>每位學生同時最多屬於一個組別。</td></tr>
+  <tr><td>BR-13</td><td>小組獎勵的冠軍與亞軍皆可並列多組；同一組不可同時為冠軍與亞軍。</td></tr>
+  <tr><td>BR-14</td><td>同一日期重複發放小組獎勵時須再次確認。</td></tr>
+  <tr><td>BR-15</td><td>轉帳分類固定為：買東西、還錢、贈送、其他；目的必填，最多 50 字。</td></tr>
+  <tr><td>BR-16</td><td>停用帳號的學生不能登入，也不能被選為收款對象；其帳戶不可轉帳，但老師仍可加扣點與沖正。</td></tr>
+  <tr><td>BR-17</td><td><b>全有全無（原子性）</b>：每一次點數異動，包括送出轉帳申請、核准轉帳、加扣點、批次、小組獎勵與沖正，其所有步驟必須全部成功，或全部不生效。不得出現「付款人扣了、收款人沒加」或「收款碼已用、申請卻沒建立」等部分完成狀態。網路中斷或失敗時，資料維持操作前的樣子，畫面提示重試。</td></tr>
+  <tr><td>BR-18</td><td>轉帳雙方都能查看該筆交易的完整細目：對象、分類、事由、金額、狀態、時間。</td></tr>
+  <tr><td>BR-19</td><td>學生只能看到自己的餘額；任何畫面或資料都不得透露其他學生的餘額。</td></tr>
+  <tr><td>BR-20</td><td>小確幸與加點項目只有在「啟用」且「顯示於前台」時，學生才看得到。</td></tr>
+  <tr><td>BR-21</td><td>刪除學生帳號時：帳號與登入資料刪除、交易紀錄保留；涉及該生的審核中轉帳自動駁回（原因「帳號已刪除」）、其收款碼失效；剩餘點數隨帳號消失。刪除後可用相同帳號重新匯入。</td></tr>
+</table>
+</section>
+
+<!-- ================= 9 ================= -->
+<section class="chapter">
+<h2><span class="n">9</span>主要使用流程</h2>
+<h3>9.1 QR 轉帳與審核</h3>
+<div class="fig">
+<svg viewBox="0 0 700 330" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Microsoft JhengHei, Noto Sans TC, sans-serif" font-size="12">
+  <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#04803A"/></marker></defs>
+  <g font-weight="700" font-size="13" fill="#fff">
+    <rect x="20" y="10" width="160" height="34" rx="8" fill="#0B3D22"/><text x="100" y="32" text-anchor="middle">收款方（學生 A）</text>
+    <rect x="270" y="10" width="160" height="34" rx="8" fill="#0B3D22"/><text x="350" y="32" text-anchor="middle">付款方（學生 B）</text>
+    <rect x="520" y="10" width="160" height="34" rx="8" fill="#0B3D22"/><text x="600" y="32" text-anchor="middle">教師</text>
+  </g>
+  <g stroke="#BFE9CF" stroke-dasharray="4 4"><line x1="100" y1="44" x2="100" y2="320"/><line x1="350" y1="44" x2="350" y2="320"/><line x1="600" y1="44" x2="600" y2="320"/></g>
+  <g fill="#E8F8EE" stroke="#06C755">
+    <rect x="30" y="60" width="140" height="44" rx="8"/>
+    <rect x="280" y="120" width="140" height="58" rx="8"/>
+    <rect x="30" y="196" width="140" height="44" rx="8"/>
+    <rect x="530" y="196" width="140" height="58" rx="8"/>
+    <rect x="30" y="268" width="140" height="44" rx="8"/>
+    <rect x="280" y="268" width="140" height="44" rx="8"/>
+  </g>
+  <g fill="#1A2620" text-anchor="middle">
+    <text x="100" y="79">① 按「收款」</text><text x="100" y="96">產生一次性 QR 碼</text>
+    <text x="350" y="139">② 掃碼、輸入金額</text><text x="350" y="155">分類、目的</text><text x="350" y="171">送出申請（審核中）</text>
+    <text x="100" y="215">③ 即時顯示</text><text x="100" y="232">「已收到付款申請」</text>
+    <text x="600" y="215">④ 後台待審核</text><text x="600" y="231">核准 / 駁回</text><text x="600" y="247">（檢查餘額）</text>
+    <text x="100" y="287">⑤ 餘額增加</text><text x="100" y="304">明細更新</text>
+    <text x="350" y="287">⑤ 餘額減少</text><text x="350" y="304">明細更新</text>
+  </g>
+  <g stroke="#04803A" stroke-width="1.6" fill="none" marker-end="url(#ar)">
+    <path d="M170 90 L278 135"/>
+    <path d="M280 170 L172 210"/>
+    <path d="M420 160 L528 210"/>
+    <path d="M530 240 L172 285"/>
+    <path d="M540 254 L420 285"/>
+  </g>
+  <text x="222" y="104" font-size="11" fill="#04803A">QR 碼（3 分鐘內）</text>
+</svg>
+<div class="cap">圖 9-1　QR 轉帳與教師審核流程</div>
+</div>
+<h3>9.2 每日小組獎勵</h3>
+<ol>
+  <li>老師開啟「小組獎勵」頁，日期預設今天。</li>
+  <li>在「冠軍」勾選一或多組（並列），在「亞軍」勾選一或多組。</li>
+  <li>確認或修改每人點數（預設冠軍 500、亞軍 300）。</li>
+  <li>組員自動列出並預設全選，取消請假學生。</li>
+  <li>檢視預覽（人數、合計）後按「確認發放」；若今天已發放過，系統會先提醒。</li>
+  <li>各組員立即入帳；學生 iPad 上即時顯示「小組冠軍 +500」。</li>
+  <li>若發錯，於「小組獎勵歷史」或「交易紀錄」對該批次按「整批沖正」。</li>
+</ol>
+<h3>9.3 沖正</h3>
+<ol>
+  <li>老師在交易紀錄找到錯誤交易，按「沖正」並填寫原因。</li>
+  <li>系統檢查：該交易尚未沖正、不是沖正交易、沖正後各方餘額不小於 0。</li>
+  <li>產生反向交易，並把原交易標示為「已沖正」；雙方明細都能看到兩筆紀錄。</li>
+</ol>
+</section>
+
+<!-- ================= 10 ================= -->
+<section class="chapter">
+<h2><span class="n">10</span>介面與視覺規範</h2>
+<h3>10.1 品牌識別</h3>
+<div class="two">
+  <div>
+    <p>系統視覺以學校提供的 HSPS logo 為核心：圓角方形綠底，內含白色對話泡泡與綠色「HSPS」字樣。</p>
+    <ul>
+      <li>登入頁中央放置 logo（96px 以上）與「HSPS 點數銀行」字樣。</li>
+      <li>頁首左側放置 logo（32～40px）。</li>
+      <li>用作網站 favicon、iPad「加入主畫面」圖示（apple-touch-icon 180×180）與 PWA 圖示。</li>
+      <li>logo 周圍留白至少為 logo 寬度的 1/4；不變形、不改色、不加陰影。</li>
+    </ul>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:center;gap:18px">
+    <img src="logo.png" style="width:120px;height:120px" alt="HSPS logo">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <img src="logo.png" style="width:40px;height:40px" alt="">
+      <span class="small muted">40px 頁首</span>
+      <img src="logo.png" style="width:24px;height:24px" alt="">
+      <span class="small muted">24px favicon</span>
+    </div>
+  </div>
+</div>
+<h3>10.2 色彩</h3>
+<p>主色取自 logo 綠色 <code>#06C755</code>。由於亮綠底上的白字對比不足，<b>放白色文字的按鈕與標題列改用加深綠</b>，亮綠只用於大面積色塊、圖示與強調。</p>
+<div class="swatches">
+  <div class="sw"><div class="c" style="background:#06C755"></div><div class="l"><b>HSPS 綠</b>#06C755<br>logo、強調、大色塊</div></div>
+  <div class="sw"><div class="c" style="background:#04803A"></div><div class="l"><b>深綠</b>#04803A<br>主要按鈕、連結、收入</div></div>
+  <div class="sw"><div class="c" style="background:#0B3D22"></div><div class="l"><b>墨綠</b>#0B3D22<br>標題、側邊欄、餘額卡</div></div>
+  <div class="sw"><div class="c" style="background:#E8F8EE"></div><div class="l"><b>淡綠</b>#E8F8EE<br>背景區塊、選取狀態</div></div>
+  <div class="sw"><div class="c" style="background:#B42318"></div><div class="l"><b>支出紅</b>#B42318<br>扣點、支出、駁回</div></div>
+  <div class="sw"><div class="c" style="background:#B45309"></div><div class="l"><b>審核琥珀</b>#B45309<br>審核中、警示</div></div>
+  <div class="sw"><div class="c" style="background:#1A2620"></div><div class="l"><b>文字</b>#1A2620<br>內文</div></div>
+  <div class="sw"><div class="c" style="background:#F6F8F6;border-bottom:1px solid #DCE5DF"></div><div class="l"><b>底色</b>#F6F8F6<br>頁面背景</div></div>
+</div>
+<h3>10.3 金額與狀態的語意</h3>
+<table class="t">
+  <tr><th style="width:22%">狀態</th><th style="width:30%">呈現</th><th>說明</th></tr>
+  <tr><td>收入</td><td style="color:#04803A;font-weight:700">+3,000</td><td>深綠，帶「+」號</td></tr>
+  <tr><td>支出</td><td style="color:#B42318;font-weight:700">−800</td><td>紅色，帶「−」號（不只靠顏色區分，色弱也能辨識）</td></tr>
+  <tr><td>審核中</td><td><span class="pill" style="background:#FEF3E2;color:#B45309;border:1px solid #F5C98A">審核中</span></td><td>琥珀色標籤，金額灰色</td></tr>
+  <tr><td>已駁回</td><td><span class="pill p2">已駁回</span></td><td>灰色標籤，附駁回原因</td></tr>
+  <tr><td>已沖正</td><td style="color:#8A958F;text-decoration:line-through">−300</td><td>灰色加刪除線，並顯示沖正交易連結</td></tr>
+</table>
+<h3>10.4 版面與可用性</h3>
+<ul>
+  <li><b>學生端（iPad 為主，亦支援電腦）</b>：
+    <ul>
+      <li>響應式版面：iPad 直向為單欄，iPad 橫向與電腦為雙欄。</li>
+      <li>字級內文 ≥ 16px、餘額 ≥ 56px。</li>
+      <li>觸控目標 ≥ 44px。</li>
+      <li>每項任務不超過 3 步。</li>
+    </ul>
+  </li>
+  <li><b>教師端（電腦）</b>：
+    <ul>
+      <li>左側選單加內容區，寬度 ≥ 1280px 時最佳。</li>
+      <li>表格支援排序與多選。</li>
+    </ul>
+  </li>
+  <li>文字與背景對比符合 WCAG AA（4.5:1）；所有圖示按鈕附文字標籤。</li>
+  <li>字型：系統內建中文字型（iPad 為蘋方，Windows 為微軟正黑體），數字使用等寬數字，方便金額對齊。</li>
+  <li>介面文字為繁體中文；日期格式為 2026/09/26，金額使用千分位。</li>
+</ul>
+</section>
+
+<!-- ================= 11 ================= -->
+<section class="chapter">
+<h2><span class="n">11</span>非功能需求</h2>
+<table class="t">
+  <tr><th style="width:15%">類別</th><th>需求</th></tr>
+  <tr><td>效能</td><td>首頁首次載入 ≤ 3 秒（校園 Wi-Fi）；餘額與審核狀態變更在 3 秒內同步到所有相關裝置。</td></tr>
+  <tr><td>相容性</td><td>學生：iPadOS 16 以上 Safari（含加入主畫面模式），以及電腦 Chrome、Edge、Safari 最新兩個版本（寬度 ≥ 1024px）。教師：電腦 Chrome、Edge 最新兩個版本。</td></tr>
+  <tr><td>安全性</td><td>
+    <ul style="margin:0">
+      <li>權限於資料庫端強制執行，不依賴前端判斷。</li>
+      <li>學生僅能讀取本人資料。</li>
+      <li>啟用 Firebase App Check。</li>
+      <li>所有使用者輸入皆跳脫輸出。</li>
+      <li>管理金鑰不進版本控制。</li>
+    </ul>
+  </td></tr>
+  <tr><td>資料正確性</td><td>所有點數異動皆為原子交易（全有全無，BR-17）；任何帳戶「已完成交易加總 = 餘額」恆成立。</td></tr>
+  <tr><td>稽核</td><td>每筆交易記錄建立者、建立時間、核准者、核准時間；帳本只增不刪。</td></tr>
+  <tr><td>隱私</td><td>
+    <ul style="margin:0">
+      <li>僅儲存學號、姓名、座號、組別，不蒐集其他個資。</li>
+      <li>學生彼此只看得到對方的姓名與座號（轉帳確認用），看不到對方餘額。</li>
+    </ul>
+  </td></tr>
+  <tr><td>可用性</td><td>系統可用度依賴 GitHub Pages 與 Firebase；網路中斷時顯示「連線中斷」，不允許離線送出交易。</td></tr>
+  <tr><td>成本</td><td>於 Firebase Spark 免費額度內運作（每日讀取 5 萬、寫入 2 萬），預估用量低於 20%。</td></tr>
+  <tr><td>可維護性</td><td>預設事件、分組、設定皆可由老師在後台自行調整，不需修改程式。</td></tr>
+  <tr><td>備份</td><td>提供一鍵全資料匯出；建議每月備份一次，並於學期末封存。</td></tr>
+</table>
+</section>
+
+<!-- ================= 12 ================= -->
+<section class="chapter cont">
+<h2><span class="n">12</span>範圍外項目與未來規劃</h2>
+<table class="t">
+  <tr><th style="width:26%">功能</th><th>說明</th><th style="width:9%" class="c">優先</th></tr>
+  <tr><td>福利商店</td><td>在 F-S07 小確幸頁加上「申請兌換」按鈕，並加入庫存與限購；學生申請、老師核准後扣點。</td><td class="c"><span class="pill p2">P2</span></td></tr>
+  <tr><td>定存與利息</td><td>學生把點數存為定存，到期領利息，學習延遲享樂與複利。</td><td class="c"><span class="pill p2">P2</span></td></tr>
+  <tr><td>存款目標</td><td>學生設定儲蓄目標並顯示進度條。</td><td class="c"><span class="pill p2">P2</span></td></tr>
+  <tr><td>個人月報表</td><td>每月收支統計，可列印給家長。</td><td class="c"><span class="pill p2">P2</span></td></tr>
+  <tr><td>名次匯入</td><td>從「另一個系統」匯入每日小組名次（待確認該系統能否匯出）。</td><td class="c"><span class="pill p2">P2</span></td></tr>
+  <tr><td>學期結算</td><td>封存學期資料，並選擇歸零或保留餘額。</td><td class="c"><span class="pill p2">P2</span></td></tr>
+  <tr><td>多班級、多教師</td><td>擴充為年級或全校使用，並依班級授權。</td><td class="c"><span class="pill p2">P2</span></td></tr>
+  <tr><td>轉帳限制</td><td>單筆上限、每日次數；目前以人工審核取代。</td><td class="c"><span class="pill p2">P2</span></td></tr>
+</table>
+</section>
+
+<!-- ================= 13 ================= -->
+<section class="chapter">
+<h2><span class="n">13</span>驗收與上線計畫</h2>
+<h3>13.1 里程碑</h3>
+<table class="t">
+  <tr><th style="width:14%">階段</th><th>內容</th><th style="width:26%">完成標準</th></tr>
+  <tr><td>M0 設計</td><td>PRD / SDD 確認、介面原型確認</td><td>老師簽核文件與原型</td></tr>
+  <tr><td>M1 基礎</td><td>專案骨架、登入、學生首頁與明細、教師學生總覽、CSV 匯入</td><td>學生可登入看到餘額</td></tr>
+  <tr><td>M2 加扣點</td><td>預設事件、個別與批次加扣點、分組、小組獎勵、沖正</td><td>小組獎勵情境驗收通過</td></tr>
+  <tr><td>M3 轉帳</td><td>收款碼、掃碼付款、審核</td><td>QR 轉帳情境驗收通過</td></tr>
+  <tr><td>M4 強化</td><td>交易紀錄匯出、對帳、備份、安全測試、PWA</td><td>所有自動化測試通過</td></tr>
+  <tr><td>M5 試行</td><td>3～5 位學生實機試用一週</td><td>無重大問題</td></tr>
+  <tr><td>M6 上線</td><td>全班帳號建立、發放帳號卡、正式使用</td><td>31 位學生皆可登入</td></tr>
+</table>
+<h3>13.2 驗收情境清單</h3>
+<table class="t">
+  <tr><th style="width:8%" class="c">#</th><th>情境</th><th style="width:32%">預期結果</th></tr>
+  <tr><td class="c">1</td><td>匯入 31 位學生名冊，其中 1 列帳號重複</td><td>預覽標示錯誤列，其餘 30 列可匯入</td></tr>
+  <tr><td class="c">2</td><td>批次全班 +1,000</td><td>31 筆交易，全班總點數 +31,000</td></tr>
+  <tr><td class="c">3</td><td>小組獎勵：兩組並列冠軍、一組亞軍、一人請假</td><td>請假者未入帳，其餘正確入帳</td></tr>
+  <tr><td class="c">4</td><td>學生 A 收款，學生 B 掃碼付 200 點</td><td>雙方顯示審核中，餘額不變</td></tr>
+  <tr><td class="c">5</td><td>學生 C 用同一張 QR 截圖再付一次</td><td>顯示「收款碼已使用或已失效」</td></tr>
+  <tr><td class="c">6</td><td>老師核准情境 4</td><td>A +200、B −200，雙方明細更新</td></tr>
+  <tr><td class="c">7</td><td>B 送出兩筆共 1,500 點，但餘額只有 1,000</td><td>第一筆可核准，第二筆提示餘額不足</td></tr>
+  <tr><td class="c">8</td><td>老師沖正情境 6</td><td>餘額還原，原交易標示已沖正</td></tr>
+  <tr><td class="c">9</td><td>學生嘗試開啟教師網址</td><td>被導回學生首頁</td></tr>
+  <tr><td class="c">10</td><td>對帳檢查</td><td>無不一致帳戶</td></tr>
+  <tr><td class="c">11</td><td>學生在電腦上登入，以輸入收款代碼方式付款</td><td>成功送出申請</td></tr>
+  <tr><td class="c">12</td><td>轉帳送出或核准過程中中斷網路</td><td>資料維持操作前狀態，無部分完成</td></tr>
+  <tr><td class="c">13</td><td>付款人與收款人各自開啟同一筆轉帳詳情</td><td>對象、事由、金額、狀態一致；看不到對方餘額</td></tr>
+  <tr><td class="c">14</td><td>老師新增小確幸並設為顯示於前台</td><td>學生「點數規則與小確幸」頁即時出現</td></tr>
+</table>
+</section>
+
+<!-- ================= 14 ================= -->
+<section class="chapter cont">
+<h2><span class="n">14</span>待決事項</h2>
+<table class="t">
+  <tr><th style="width:8%" class="c">#</th><th>事項</th><th style="width:34%">目前預設</th></tr>
+  <tr><td class="c">Q1</td><td>「另一個系統」是否能匯出小組名次？</td><td>先由老師手動選擇</td></tr>
+  <tr><td class="c">Q2</td><td>小組冠軍與亞軍每人點數</td><td>冠軍 500、亞軍 300（可在設定修改）</td></tr>
+  <tr><td class="c">Q3</td><td>收款碼有效時間</td><td>3 分鐘</td></tr>
+  <tr><td class="c">Q4</td><td>預設事件的初始清單與點數</td><td>見 F-T09 範例</td></tr>
+  <tr><td class="c">Q5</td><td>學生初始密碼規則</td><td>沿用名冊 account.xlsx 的密碼（至少 6 碼）。建議正式上線前改為不含身分證字號等個資的密碼</td></tr>
+  <tr><td class="c">Q6</td><td>學期結束後餘額處理方式</td><td>保留（未來版本提供結算功能）</td></tr>
+  <tr><td class="c">Q7</td><td>網站網址（GitHub 帳號與 repo 名稱）</td><td>待老師提供</td></tr>
+  <tr><td class="c">Q8</td><td>學生前台是否也顯示「賺點方式」（加點項目）？</td><td>顯示（老師可逐項關閉）</td></tr>
+  <tr><td class="c">Q9</td><td>小確幸是否開放學生線上申請兌換？</td><td>本版不開放，列為未來「福利商店」</td></tr>
+</table>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>HSPS 點數銀行 SDD</title>
+<link rel="stylesheet" href="doc.css">
+</head>
+<body>
+<span class="doc-title-string">HSPS 點數銀行｜系統設計文件 SDD v1.4</span>
+
+<!-- ================= COVER ================= -->
+<div class="cover">
+  <div class="cover-top">
+    <img src="logo.png" alt="HSPS logo">
+    <div class="org">HSPS 班級點數銀行<small>CLASS POINT BANK</small></div>
+  </div>
+  <div class="cover-mid">
+    <span class="kicker">SDD · 系統設計文件</span>
+    <h1>HSPS 點數銀行<br>系統設計文件</h1>
+    <div class="sub">Software Design Document</div>
+    <div class="cover-bar"></div>
+    <table class="meta-table">
+      <tr><td>版本</td><td>v1.4</td></tr>
+      <tr><td>日期</td><td>2026 年 9 月 27 日</td></tr>
+      <tr><td>對應需求</td><td>HSPS 點數銀行 產品需求文件（PRD）v1.3</td></tr>
+      <tr><td>技術棧</td><td>Vue 3 · Vite · Firebase（Auth / Firestore）· GitHub Pages</td></tr>
+      <tr><td>狀態</td><td>Firebase 正式版已實作並部署（hsps-point-bank）；模擬資料庫保留為開發與試用</td></tr>
+    </table>
+  </div>
+  <img class="cover-logo-big" src="logo.png" alt="">
+</div>
+
+<!-- ================= TOC ================= -->
+<div class="toc">
+  <h2>目錄</h2>
+  <ol>
+    <li><span class="n">1</span>系統概觀與架構</li>
+    <li><span class="n">2</span>技術選型</li>
+    <li><span class="n">3</span>專案結構</li>
+    <li><span class="n">4</span>資料模型</li>
+    <li><span class="n">5</span>身分驗證與授權</li>
+    <li><span class="n">6</span>核心流程設計</li>
+    <li><span class="n">7</span>Firestore Security Rules</li>
+    <li><span class="n">8</span>前端設計</li>
+    <li><span class="n">9</span>QR 收付款設計</li>
+    <li><span class="n">10</span>錯誤處理</li>
+    <li><span class="n">11</span>部署與環境</li>
+    <li><span class="n">12</span>安全設計</li>
+    <li><span class="n">13</span>測試策略</li>
+    <li><span class="n">14</span>容量與配額估算</li>
+    <li><span class="n">15</span>維運、備份與管理腳本</li>
+    <li><span class="n">16</span>風險與對策</li>
+  </ol>
+</div>
+
+<!-- ================= 1 ================= -->
+<section class="chapter" style="page-break-before:auto">
+<h2><span class="n">1</span>系統概觀與架構</h2>
+<p>系統為<b>純前端單頁應用（SPA）</b>，靜態檔案部署於 GitHub Pages；資料與登入由 Firebase 提供。因為使用免費 Spark 方案、沒有自有後端，<b>所有權限與資料完整性檢查都由 Firestore Security Rules 在資料庫端強制執行</b>，前端檢查只負責使用者體驗。</p>
+<div class="fig">
+<svg viewBox="0 0 700 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Microsoft JhengHei, Noto Sans TC, sans-serif" font-size="12">
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#04803A"/></marker></defs>
+  <rect x="10" y="20" width="170" height="110" rx="12" fill="#E8F8EE" stroke="#06C755"/>
+  <text x="95" y="48" text-anchor="middle" font-weight="700" font-size="14" fill="#0B3D22">學生 × 31</text>
+  <text x="95" y="72" text-anchor="middle" fill="#1A2620">iPad 為主，亦可用電腦</text>
+  <text x="95" y="92" text-anchor="middle" fill="#1A2620">相機掃描或輸入代碼</text>
+  <text x="95" y="112" text-anchor="middle" fill="#1A2620">保持登入</text>
+  <rect x="10" y="170" width="170" height="110" rx="12" fill="#E8F8EE" stroke="#06C755"/>
+  <text x="95" y="198" text-anchor="middle" font-weight="700" font-size="14" fill="#0B3D22">教師電腦 × 1</text>
+  <text x="95" y="222" text-anchor="middle" fill="#1A2620">Chrome / Edge</text>
+  <text x="95" y="242" text-anchor="middle" fill="#1A2620">後台管理</text>
+  <text x="95" y="262" text-anchor="middle" fill="#1A2620">本機管理腳本</text>
+
+  <rect x="255" y="95" width="180" height="110" rx="12" fill="#0B3D22"/>
+  <text x="345" y="125" text-anchor="middle" font-weight="700" font-size="14" fill="#fff">GitHub Pages</text>
+  <text x="345" y="149" text-anchor="middle" fill="#CDEFD9">Vue 3 SPA（靜態檔）</text>
+  <text x="345" y="169" text-anchor="middle" fill="#CDEFD9">HTTPS · PWA</text>
+  <text x="345" y="189" text-anchor="middle" fill="#CDEFD9">GitHub Actions 自動部署</text>
+
+  <rect x="510" y="20" width="180" height="260" rx="12" fill="#fff" stroke="#04803A" stroke-width="1.5"/>
+  <text x="600" y="46" text-anchor="middle" font-weight="700" font-size="14" fill="#0B3D22">Firebase（Spark 免費）</text>
+  <rect x="525" y="60" width="150" height="44" rx="8" fill="#E8F8EE"/><text x="600" y="87" text-anchor="middle">Authentication</text>
+  <rect x="525" y="112" width="150" height="44" rx="8" fill="#E8F8EE"/><text x="600" y="139" text-anchor="middle">Cloud Firestore</text>
+  <rect x="525" y="164" width="150" height="44" rx="8" fill="#06C755"/><text x="600" y="191" text-anchor="middle" fill="#0B3D22" font-weight="700">Security Rules</text>
+  <rect x="525" y="216" width="150" height="44" rx="8" fill="#E8F8EE"/><text x="600" y="243" text-anchor="middle">App Check</text>
+
+  <g stroke="#04803A" stroke-width="1.6" fill="none" marker-end="url(#a)">
+    <path d="M180 75 L253 130"/><path d="M180 225 L253 170"/>
+    <path d="M435 150 L508 150"/>
+    <path d="M180 60 C 330 0, 440 20, 508 70"/>
+  </g>
+  <text x="440" y="140" font-size="11" fill="#04803A">SDK</text>
+  <text x="300" y="30" font-size="11" fill="#04803A">載入網頁後，瀏覽器直接連 Firebase</text>
+</svg>
+<div class="cap">圖 1-1　系統架構</div>
+</div>
+<h3>1.1 設計原則</h3>
+<ul>
+  <li><b>資料庫即防線</b>：前端程式可被竄改，因此每一條權限規則都寫在 Security Rules 並有自動化測試。</li>
+  <li><b>帳本為唯一真相</b>：<code>transactions</code> 只增不刪；<code>users.balance</code> 是帳本加總的快取，由原子交易維護，並提供對帳檢查。</li>
+  <li><b>學生只能「申請」</b>：學生唯一能建立的交易是「審核中的轉帳」；所有餘額變動都由教師端的原子交易完成。</li>
+  <li><b>即時同步</b>：以 Firestore <code>onSnapshot</code> 監聽，餘額與審核狀態自動更新。</li>
+  <li><b>全有全無</b>：每一次點數異動都在單一 <code>writeBatch</code> 或 <code>runTransaction</code> 內完成，不存在部分成功（詳見 6.0）。</li>
+  <li><b>最小揭露</b>：學生只看得到自己的餘額；交易文件不含任何餘額資訊。</li>
+</ul>
+</section>
+
+<section class="chapter cont">
+<h3>1.2 實作現況（v1.4）</h3>
+<p>系統有兩種資料後端，實作同一個 <code>BankApi</code> 介面、共用同一套業務規則（<code>src/api/shared.ts</code>）：</p>
+<table class="t">
+  <tr><th style="width:22%">後端</th><th>用途</th><th style="width:30%">切換</th></tr>
+  <tr><td><b>FirebaseApi</b></td><td>正式版：Firebase Auth + Cloud Firestore，權限由 <code>firestore.rules</code> 在伺服器端強制</td><td><code>VITE_BACKEND=firebase</code>（<code>.env.production</code>）</td></tr>
+  <tr><td>MockApi</td><td>開發、示範與自動化測試：瀏覽器內模擬資料庫</td><td>預設（<code>npm run dev</code>）</td></tr>
+</table>
+
+<h3>1.3 Firebase 正式版的實作決策</h3>
+<table class="t">
+  <tr><th style="width:24%">項目</th><th>決策</th></tr>
+  <tr><td>學生登入帳號</td><td>Firebase Auth 電子郵件帳號 <code>{帳號}@students.hsps-point-bank.firebaseapp.com</code>（不收信）；教師為 tyctc128@gmail.com，登入畫面可輸入 <code>teacher</code>。</td></tr>
+  <tr><td>時間欄位</td><td>以毫秒數（int）儲存。規則以 <code>request.time.toMillis()</code> 驗證：用戶端時間需與伺服器相差 5 分鐘內；收款碼過期一律以伺服器時間判斷。</td></tr>
+  <tr><td>讀取與額度</td><td>以 <code>onSnapshot</code> 維護記憶體快取，畫面重新整理不重複計費。老師端同步最近 60 天交易與所有審核中申請，更早資料在查詢時才讀取。</td></tr>
+  <tr><td>寫入</td><td>核准、加扣點、小組獎勵、沖正、刪除學生皆為 <code>runTransaction</code>（先讀後寫、衝突自動重試）；送出轉帳為 <code>writeBatch</code>（交易 + 收款碼，規則以 <code>getAfter</code> 綁定）。</td></tr>
+  <tr><td>索引</td><td>所有查詢皆為單一欄位條件（或兩個相等條件），不需要複合索引。</td></tr>
+  <tr><td>管理工具</td><td><code>npm run admin</code>（Admin SDK，老師電腦執行）：建立教師、匯入名冊、重設密碼、清除已刪除學生的登入帳號、備份、發布規則。服務帳戶金鑰只存在老師電腦。</td></tr>
+  <tr><td>登入狀態</td><td>瀏覽器保存登入（一人一台 iPad）；同一個瀏覽器的所有分頁共用同一個登入身分。</td></tr>
+</table>
+<h3>1.4 模擬資料庫（開發與試用）</h3>
+<p>第一版先以<b>瀏覽器內的模擬資料庫</b>完成全部功能，之後再移植到 Firebase（步驟見 <code>docs/MIGRATION.md</code>）。</p>
+<table class="t">
+  <tr><th style="width:26%">元件</th><th>說明</th></tr>
+  <tr><td><code>BankApi</code> 介面</td><td>前端所有畫面只依賴 <code>src/api/types.ts</code> 的介面；移植時新增 <code>FirebaseApi</code> 實作同一介面，畫面不需修改。</td></tr>
+  <tr><td><code>MockStore</code></td><td>整份資料以單一 JSON 存在 localStorage。<code>transact()</code> 在記憶體副本上完成所有修改，全部成功才一次寫回，並比對版本號處理多分頁並行（對應 Firestore <code>runTransaction</code>）。</td></tr>
+  <tr><td><code>MockApi</code></td><td>每個方法先依資料庫中的角色與狀態檢查權限（對應 Security Rules），業務規則與第 6 章相同。</td></tr>
+  <tr><td>登入</td><td>密碼以 PBKDF2-SHA256（10 萬次、隨機 salt）雜湊保存；登入狀態存在分頁的 sessionStorage，可在同一台電腦以不同分頁同時登入老師與學生。</td></tr>
+  <tr><td>即時同步</td><td>BroadcastChannel 與 storage 事件通知其他分頁重新讀取（對應 <code>onSnapshot</code>）。</td></tr>
+  <tr><td>限制</td><td>資料不跨裝置同步；能操作該電腦主控台的人可直接修改 localStorage。模擬版僅供試用與驗收，正式上線需移植 Firebase。</td></tr>
+</table>
+<p>名冊匯入相容老師現有的 <code>account.xlsx</code>（no / account / passwd / name）；檔案只在瀏覽器內解析，不會上傳，也不會進入程式包或 git。</p>
+</section>
+
+<!-- ================= 2 ================= -->
+<section class="chapter">
+<h2><span class="n">2</span>技術選型</h2>
+<table class="t">
+  <tr><th style="width:22%">類別</th><th style="width:30%">選擇</th><th>理由</th></tr>
+  <tr><td>前端框架</td><td>Vue 3（Composition API）+ TypeScript</td><td>見 2.1</td></tr>
+  <tr><td>建置工具</td><td>Vite</td><td>啟動快、設定少，輸出靜態檔適合 GitHub Pages</td></tr>
+  <tr><td>路由</td><td>Vue Router 4（Hash 模式）</td><td>GitHub Pages 不支援 SPA 路由改寫；Hash 模式重新整理不會 404</td></tr>
+  <tr><td>狀態管理</td><td>Pinia</td><td>Vue 官方推薦，型別友善</td></tr>
+  <tr><td>樣式</td><td>Tailwind CSS 4</td><td>以設計權杖（色彩、間距）統一 logo 綠色系視覺</td></tr>
+  <tr><td>Firebase SDK</td><td>firebase v11（模組化）</td><td>Auth、Firestore、App Check；支援 tree-shaking</td></tr>
+  <tr><td>QR 產生</td><td>qrcode</td><td>產生 SVG / Canvas QR 碼</td></tr>
+  <tr><td>QR 掃描</td><td>qr-scanner（nimiq）</td><td>體積小、支援 iPad Safari 與 WebWorker 解碼</td></tr>
+  <tr><td>CSV 解析</td><td>PapaParse</td><td>處理 BOM、Big5 轉存的 UTF-8 CSV</td></tr>
+  <tr><td>Excel 匯出</td><td>SheetJS（官方 CDN 套件）</td><td>產生 .xlsx</td></tr>
+  <tr><td>拖拉分組</td><td>vuedraggable（SortableJS）</td><td>支援觸控與滑鼠</td></tr>
+  <tr><td>測試</td><td>Vitest、@firebase/rules-unit-testing、Playwright</td><td>單元、Rules、端對端</td></tr>
+  <tr><td>本機模擬</td><td>Firebase Emulator Suite</td><td>開發與測試不動正式資料</td></tr>
+</table>
+<h3>2.1 為什麼選 Vue 而不是 React</h3>
+<div class="box">
+<ul style="margin:0">
+  <li><b>單檔元件（.vue）直觀</b>：HTML、邏輯、樣式在同一檔，日後老師或其他人接手維護門檻較低。</li>
+  <li><b>樣板程式少</b>：表單雙向綁定（<code>v-model</code>）適合本系統大量的表單與勾選清單。</li>
+  <li><b>中文文件完整</b>：Vue 官方提供繁體中文文件。</li>
+  <li><b>規模相符</b>：本系統為中小型後台加行動頁面，兩者都能勝任；React 生態較大，但本案用不到。</li>
+</ul>
+</div>
+</section>
+
+<!-- ================= 3 ================= -->
+<section class="chapter cont">
+<h2><span class="n">3</span>專案結構</h2>
+<pre class="light">bank/
+├─ index.html
+├─ public/
+│  ├─ logo.png                 <span class="cm"># HSPS logo（原始檔）</span>
+│  ├─ apple-touch-icon.png     <span class="cm"># 180×180，iPad 加入主畫面</span>
+│  ├─ icon-192.png / icon-512.png
+│  └─ manifest.webmanifest
+├─ src/
+│  ├─ main.ts / App.vue
+│  ├─ firebase.ts              <span class="cm"># 初始化 App、Auth、Firestore、App Check</span>
+│  ├─ router/index.ts          <span class="cm"># 路由與角色守衛</span>
+│  ├─ stores/                  <span class="cm"># Pinia：auth、account、teacher、settings</span>
+│  ├─ domain/                  <span class="cm"># 純邏輯（可單元測試）</span>
+│  │  ├─ types.ts              <span class="cm"># 資料型別</span>
+│  │  ├─ money.ts              <span class="cm"># 金額驗證、格式化</span>
+│  │  ├─ csv.ts                <span class="cm"># 學生名單解析與驗證</span>
+│  │  ├─ dates.ts              <span class="cm"># Asia/Taipei 日期、本週區間</span>
+│  │  └─ codes.ts              <span class="cm"># 收款碼產生</span>
+│  ├─ services/                <span class="cm"># 與 Firestore 互動</span>
+│  │  ├─ users.ts  transactions.ts  approvals.ts  adjustments.ts
+│  │  ├─ groupAwards.ts  reversals.ts  paymentCodes.ts
+│  │  ├─ groups.ts  presets.ts  settings.ts  accounts.ts  export.ts
+│  ├─ components/              <span class="cm"># 共用元件：BalanceCard、TxList、TxRow、StudentPicker…</span>
+│  └─ views/
+│     ├─ LoginView.vue
+│     ├─ student/  HomeView  HistoryView  TxDetailView  PerksView
+│     │            ReceiveView  PayView  ProfileView
+│     └─ teacher/  DashboardView  ApprovalsView  StudentsView  StudentDetailView
+│                  AdjustView  BatchView  GroupAwardView  LedgerView
+│                  PresetsView  GroupsView  AccountsView  SettingsView
+├─ firestore.rules
+├─ firestore.indexes.json
+├─ firebase.json               <span class="cm"># Emulator 設定</span>
+├─ scripts/
+│  ├─ admin.mjs                <span class="cm"># 本機管理腳本（重設密碼、初始化教師）</span>
+│  └─ service-account.json     <span class="cm"># ⚠ 已列入 .gitignore，絕不提交</span>
+├─ tests/
+│  ├─ unit/  rules/  integration/  e2e/
+└─ .github/workflows/deploy.yml</pre>
+</section>
+
+<!-- ================= 4 ================= -->
+<section class="chapter">
+<h2><span class="n">4</span>資料模型（Cloud Firestore）</h2>
+<p>所有金額為整數。時間欄位使用 Firestore <code>Timestamp</code>，由 <code>serverTimestamp()</code> 或 <code>request.time</code> 產生；顯示時轉為 Asia/Taipei。</p>
+
+<h3>4.1 users/{uid}</h3>
+<p class="small muted">文件 ID = Firebase Auth uid。一位教師 + 31 位學生。</p>
+<table class="t">
+  <tr><th style="width:20%">欄位</th><th style="width:18%">型別</th><th>說明</th></tr>
+  <tr><td><code>role</code></td><td>'student' | 'teacher'</td><td>角色，只能由教師或管理腳本設定</td></tr>
+  <tr><td><code>account</code></td><td>string</td><td>登入帳號（名冊中的學生帳號；教師為 teacher）</td></tr>
+  <tr><td><code>name</code></td><td>string</td><td>姓名</td></tr>
+  <tr><td><code>seatNo</code></td><td>number</td><td>座號</td></tr>
+  <tr><td><code>groupId</code></td><td>string | null</td><td>所屬組別</td></tr>
+  <tr><td><code>balance</code></td><td>number（int ≥ 0）</td><td>目前餘額（帳本加總的快取）</td></tr>
+  <tr><td><code>active</code></td><td>boolean</td><td>false 時無任何存取權限</td></tr>
+  <tr><td><code>createdAt</code> / <code>updatedAt</code></td><td>Timestamp</td><td></td></tr>
+</table>
+
+<h3>4.2 transactions/{txId}：帳本</h3>
+<div class="box"><div class="h">隱私設計（v1.1 修正）</div>轉帳雙方都能讀取同一份交易文件，因此交易文件<b>不儲存任何餘額快照</b>，避免從資料中看出對方餘額。明細上的「交易後結餘」由前端依本人目前餘額與明細往回推算；教師端對帳亦以帳本加總計算。</div>
+<table class="t">
+  <tr><th style="width:20%">欄位</th><th style="width:22%">型別</th><th>說明</th></tr>
+  <tr><td><code>type</code></td><td>'reward' | 'penalty' | 'transfer' | 'groupReward' | 'reversal'</td><td>交易類型</td></tr>
+  <tr><td><code>amount</code></td><td>int &gt; 0</td><td>一律正數；方向由 from / to 決定</td></tr>
+  <tr><td><code>fromUid</code> / <code>toUid</code></td><td>string | null</td><td>null 代表「銀行」（加點時 from 為 null，扣點時 to 為 null）</td></tr>
+  <tr><td><code>fromName</code> / <code>toName</code><br><code>fromSeatNo</code> / <code>toSeatNo</code></td><td>string / number | null</td><td>雙方姓名與座號快照，讓轉帳雙方不必讀取對方帳戶，就能看到對象是誰</td></tr>
+  <tr><td><code>participants</code></td><td>string[]</td><td>涉及的學生 uid，供查詢與權限使用</td></tr>
+  <tr><td><code>status</code></td><td>'pending' | 'approved' | 'rejected'</td><td>教師直接加扣點建立時即為 approved</td></tr>
+  <tr><td><code>title</code></td><td>string</td><td>摘要，例如「表現優良」「小組冠軍（第 3 組）」</td></tr>
+  <tr><td><code>note</code></td><td>string ≤ 50</td><td>事由：加扣點原因或轉帳目的；轉帳雙方皆可見</td></tr>
+  <tr><td><code>category</code></td><td>'buy' | 'repay' | 'gift' | 'other' | null</td><td>轉帳分類：買東西、還錢、贈送、其他</td></tr>
+  <tr><td><code>presetId</code></td><td>string | null</td><td>來源預設事件</td></tr>
+  <tr><td><code>batchId</code></td><td>string | null</td><td>批次編號（批次加扣點、小組獎勵）</td></tr>
+  <tr><td><code>group</code></td><td>map | null</td><td><code>{ id, name, rank: 1|2, tied: bool, awardDate: 'YYYY-MM-DD' }</code></td></tr>
+  <tr><td><code>codeId</code></td><td>string | null</td><td>轉帳使用的收款碼</td></tr>
+    <tr><td><code>reversalOf</code></td><td>string | null</td><td>本筆為沖正時，指向原交易</td></tr>
+  <tr><td><code>reversedBy</code></td><td>string | null</td><td>原交易被沖正後，指向沖正交易</td></tr>
+  <tr><td><code>rejectReason</code></td><td>string | null</td><td>駁回原因</td></tr>
+  <tr><td><code>createdBy</code> / <code>createdAt</code></td><td>uid / Timestamp</td><td>建立者與時間</td></tr>
+  <tr><td><code>decidedBy</code> / <code>decidedAt</code></td><td>uid / Timestamp</td><td>核准或駁回者與時間</td></tr>
+</table>
+
+<h3>4.3 paymentCodes/{codeId}：一次性收款碼</h3>
+<table class="t">
+  <tr><th style="width:20%">欄位</th><th style="width:18%">型別</th><th>說明</th></tr>
+  <tr><td>文件 ID</td><td>8 碼</td><td>字元集 <code>A–Z、2–9</code> 去除易混淆的 I、O、0、1（32 種字元，約 40 bits 隨機）</td></tr>
+  <tr><td><code>toUid</code> / <code>toName</code> / <code>toSeatNo</code></td><td></td><td>收款人（快照，付款方不必讀取他人帳戶）</td></tr>
+  <tr><td><code>createdAt</code> / <code>expiresAt</code></td><td>Timestamp</td><td>有效期限預設 3 分鐘，最長 10 分鐘</td></tr>
+  <tr><td><code>used</code> / <code>usedBy</code> / <code>txId</code></td><td>bool / uid / string</td><td>使用狀態，與轉帳申請於同一批次寫入</td></tr>
+</table>
+
+<h3>4.4 其他集合</h3>
+<table class="t">
+  <tr><th style="width:22%">集合</th><th>欄位</th></tr>
+  <tr><td><code>presets/{id}</code><br><span class="small muted">加點項目與小確幸</span></td><td><code>kind('add'|'deduct'), name, description(≤60), amount, icon, sortOrder, active, showToStudents</code><br><span class="small">扣點且 <code>showToStudents = true</code> 者即為前台顯示的「小確幸」；<code>showToStudents = false</code> 者僅供老師使用（例如「上課講話」）。</span></td></tr>
+  <tr><td><code>groups/{id}</code></td><td><code>name, color, sortOrder, active</code></td></tr>
+  <tr><td><code>groupAwards/{batchId}</code></td><td><code>awardDate, champions[{id,name}], runnersUp[{id,name}], championAmount, runnerUpAmount, recipients[uid], excluded[uid], total, reversed, createdBy, createdAt</code></td></tr>
+  <tr><td><code>settings/app</code></td><td><code>codeTtlMinutes(1–10), championAmount, runnerUpAmount, className</code></td></tr>
+</table>
+
+<h3>4.5 索引（firestore.indexes.json）</h3>
+<table class="t">
+  <tr><th>集合</th><th>欄位</th><th style="width:34%">用途</th></tr>
+  <tr><td>transactions</td><td>participants (array-contains) + createdAt desc</td><td>學生明細</td></tr>
+  <tr><td>transactions</td><td>status + createdAt asc</td><td>待審核清單</td></tr>
+  <tr><td>transactions</td><td>batchId + createdAt</td><td>批次查詢與整批沖正</td></tr>
+  <tr><td>transactions</td><td>type + createdAt desc</td><td>交易紀錄篩選</td></tr>
+  <tr><td>groupAwards</td><td>awardDate + reversed</td><td>同日重複發放檢查</td></tr>
+  <tr><td>presets</td><td>showToStudents + active + sortOrder</td><td>學生前台「點數規則與小確幸」</td></tr>
+</table>
+<p class="small muted">v1.4 實作後確認：所有查詢皆不需複合索引（<code>firestore.indexes.json</code> 為空）。其他篩選在前端以快取資料過濾。</p>
+</section>
+
+<!-- ================= 5 ================= -->
+<section class="chapter">
+<h2><span class="n">5</span>身分驗證與授權</h2>
+<h3>5.1 帳號格式</h3>
+<ul>
+  <li>使用 Firebase Auth「電子郵件 / 密碼」登入。學生不需要真實 email，登入畫面輸入名冊帳號，程式轉為 <code>{帳號}@student.hspsbank.local</code>。
+    <ul>
+      <li>此網域不收信，僅作為識別；實作時先於 Emulator 驗證格式可被接受。</li>
+    </ul>
+  </li>
+  <li>教師使用自己的真實 email，可使用 Firebase 內建的「忘記密碼」信件。</li>
+  <li>登入狀態使用 <code>browserLocalPersistence</code>（一人一台 iPad，保持登入）。</li>
+</ul>
+<h3>5.2 角色判斷</h3>
+<ul>
+  <li>角色存於 <code>users/{uid}.role</code>，Security Rules 以 <code>get()</code> 讀取判斷；前端路由守衛只作為體驗輔助。</li>
+  <li><b>名冊制</b>：Auth 帳號必須在 <code>users</code> 有對應文件且 <code>active == true</code>，才有任何讀寫權限。因此即使有人用公開的 API 金鑰自行註冊 Auth 帳號，也無法存取任何資料。</li>
+</ul>
+<h3>5.3 帳號生命週期</h3>
+<table class="t">
+  <tr><th style="width:18%">動作</th><th>做法</th></tr>
+  <tr><td>初始化教師</td><td>於 Firebase Console 建立教師 Auth 帳號，再執行 <code>node scripts/admin.mjs init-teacher &lt;email&gt;</code> 寫入 <code>users/{uid}</code>（role = teacher）。只做一次。</td></tr>
+  <tr><td>建立學生</td><td>後台 Excel / CSV 名冊匯入：以<b>第二個 Firebase App 實例</b>呼叫 <code>createUserWithEmailAndPassword</code>，教師本身的登入不受影響；成功後由教師身分寫入 <code>users/{newUid}</code>。</td></tr>
+  <tr><td>學生改密碼</td><td>學生於個人頁輸入舊密碼重新驗證後，呼叫 <code>updatePassword</code>。</td></tr>
+  <tr><td>重設學生密碼</td><td>免費方案下瀏覽器無法修改他人密碼，因此由教師在電腦執行 <code>node scripts/admin.mjs reset-password &lt;學號&gt; &lt;新密碼&gt;</code>（Admin SDK）。</td></tr>
+  <tr><td>停用</td><td>後台將 <code>active</code> 設為 false（可批次）；Rules 立即拒絕其所有存取。</td></tr>
+  <tr><td>刪除</td><td>後台批次刪除 <code>users/{uid}</code>，同一個交易內駁回相關審核中轉帳、刪除其收款碼；<code>transactions</code> 保留（含雙方姓名座號快照）。Firebase Auth 登入帳號需以 Admin SDK 腳本刪除（<code>admin.mjs delete-users</code>）。</td></tr>
+</table>
+</section>
+
+<!-- ================= 6 ================= -->
+<section class="chapter">
+<h2><span class="n">6</span>核心流程設計</h2>
+<p>所有會改變餘額的操作都使用 Firestore <code>runTransaction</code>（讀取後寫入，衝突時自動重試），確保多人同時操作仍正確。</p>
+
+<h3>6.0 原子性（全有全無）保證</h3>
+<p>對應 PRD BR-17。每個操作涉及的所有文件都在同一個 Firestore 原子單位內寫入：伺服器要嘛全部套用，要嘛全部不套用；中途斷線也不會留下部分結果。</p>
+<table class="t">
+  <tr><th style="width:18%">操作</th><th style="width:20%">機制</th><th>同時寫入的文件</th></tr>
+  <tr><td>送出轉帳申請</td><td><code>writeBatch</code> + Rules <code>getAfter()</code></td><td>新交易（pending）＋ 收款碼標記已使用。Rules 要求兩者同時出現，缺一即整批拒絕。</td></tr>
+  <tr><td>核准轉帳</td><td><code>runTransaction</code></td><td>付款人餘額 − ＋ 收款人餘額 ＋ ＋ 交易狀態 approved</td></tr>
+  <tr><td>駁回轉帳</td><td><code>runTransaction</code></td><td>交易狀態 rejected（先確認仍為 pending）</td></tr>
+  <tr><td>個別 / 批次加扣點</td><td><code>runTransaction</code></td><td>N 位學生餘額 ＋ N 筆交易</td></tr>
+  <tr><td>小組獎勵</td><td><code>runTransaction</code></td><td>N 位學生餘額 ＋ N 筆交易 ＋ 1 筆 groupAwards</td></tr>
+  <tr><td>沖正 / 整批沖正</td><td><code>runTransaction</code></td><td>相關學生餘額 ＋ 沖正交易 ＋ 原交易 reversedBy</td></tr>
+</table>
+<ul>
+  <li><b>並行衝突</b>：<code>runTransaction</code> 讀取的文件若在提交前被他人修改，SDK 會自動重試（最多 5 次），並以最新資料重新檢查餘額與狀態。</li>
+  <li><b>防重複送出</b>：按鈕送出後立即停用，直到收到結果；轉帳申請綁定一次性收款碼，就算重送也會被 Rules 拒絕。</li>
+  <li><b>結果不明時</b>（例如送出後斷線）：畫面顯示「確認中」，重新連線後讀取最新狀態，確認後才顯示成功或失敗，不自動重送。</li>
+  <li><b>離線</b>：停用 Firestore 離線寫入佇列，避免之後連線時「延遲生效」。</li>
+</ul>
+
+<h3>6.1 學生送出轉帳申請</h3>
+<p>以 <code>writeBatch</code> 同時寫入兩份文件，Rules 用 <code>getAfter()</code> 確認兩者一致，<b>收款碼因此只能被使用一次</b>。</p>
+<pre>const txRef = doc(collection(db, 'transactions'));      <span class="cm">// 預先取得 ID</span>
+const batch = writeBatch(db);
+batch.set(txRef, {
+  type: 'transfer', status: 'pending', amount,
+  fromUid: me.uid, fromName: me.name, fromSeatNo: me.seatNo,
+  toUid: code.toUid, toName: code.toName, toSeatNo: code.toSeatNo,
+  participants: [me.uid, code.toUid],
+  title: `轉帳給 ${code.toName}`, note, category, codeId,
+  createdBy: me.uid, createdAt: serverTimestamp(), ...nullFields,
+});
+batch.update(doc(db, 'paymentCodes', codeId), { used: true, usedBy: me.uid, txId: txRef.id });
+await batch.commit();   <span class="cm">// 任一條件不符 → 整批失敗</span></pre>
+
+<h3>6.2 教師核准轉帳</h3>
+<pre>await runTransaction(db, async (t) =&gt; {
+  const tx = await t.get(txRef);
+  if (tx.data().status !== 'pending') throw new BankError('ALREADY_DECIDED');
+  const from = await t.get(userRef(tx.data().fromUid));
+  const to   = await t.get(userRef(tx.data().toUid));
+  const amt  = tx.data().amount;
+  if (from.data().balance &lt; amt) throw new BankError('INSUFFICIENT_BALANCE');
+  const fb = from.data().balance - amt, tb = to.data().balance + amt;
+  t.update(from.ref, { balance: fb, updatedAt: serverTimestamp() });
+  t.update(to.ref,   { balance: tb, updatedAt: serverTimestamp() });
+  t.update(txRef, { status: 'approved', decidedBy: teacherUid, decidedAt: serverTimestamp() });
+});</pre>
+<ul>
+  <li><b>駁回</b>：同樣以 <code>runTransaction</code> 先確認仍為 pending，再更新 <code>status = 'rejected'</code>、<code>rejectReason</code>、<code>decidedBy / decidedAt</code>，不動餘額。</li>
+  <li><b>核准所選</b>：依送出時間先後逐筆執行上述交易，逐筆回報結果（成功或餘額不足），不會因一筆失敗而中斷。</li>
+</ul>
+
+<h3>6.3 個別 / 批次加扣點、小組獎勵</h3>
+<p>三者共用同一個函式 <code>applyAdjustments(items, meta)</code>，在單一 <code>runTransaction</code> 內完成：</p>
+<ol>
+  <li>讀取所有目標學生的 <code>users</code> 文件（全班最多 31 筆）。</li>
+  <li>扣點時檢查每位學生餘額，不足者列入錯誤清單並中止（批次扣點畫面會先讓老師排除不足者）。</li>
+  <li>為每位學生寫入 <code>users.balance</code> 與一筆 <code>transactions</code>（<code>status = 'approved'</code>，共用 <code>batchId</code>）。</li>
+  <li>小組獎勵另寫一筆 <code>groupAwards/{batchId}</code>。</li>
+</ol>
+<p class="small muted">單次交易最多 500 個寫入；全班 31 人 × 2 + 1 = 63 個寫入，遠低於上限。</p>
+<div class="box"><div class="h">小組獎勵：並列名次</div>
+<code>champions</code> 與 <code>runnersUp</code> 皆為陣列，UI 以複選實作。當某名次選了 2 組以上時，交易的 <code>group.tied = true</code>，學生明細顯示「並列冠軍」。送出前查詢 <code>groupAwards</code> 中 <code>awardDate == 當日 且 reversed == false</code>，若已有紀錄則跳出確認對話框。</div>
+
+<h3>6.4 沖正</h3>
+<pre>await runTransaction(db, async (t) =&gt; {
+  const orig = await t.get(origRef);
+  const o = orig.data();
+  if (o.status !== 'approved')     throw new BankError('NOT_APPROVED');
+  if (o.reversedBy)                throw new BankError('ALREADY_REVERSED');
+  if (o.type === 'reversal')       throw new BankError('CANNOT_REVERSE_REVERSAL');
+  <span class="cm">// 反向：原本的 to 變成 from</span>
+  const revFrom = o.toUid, revTo = o.fromUid;
+  if (revFrom) { const u = await t.get(userRef(revFrom));
+                 if (u.data().balance &lt; o.amount) throw new BankError('NEGATIVE_AFTER_REVERSAL'); }
+  <span class="cm">// …更新雙方 balance、建立 type='reversal' 交易（reversalOf = 原 ID）、原交易寫入 reversedBy</span>
+});</pre>
+<p><b>整批沖正</b>：以 <code>batchId</code> 查出所有未沖正交易，在同一個交易中全部沖正；小組獎勵同時將 <code>groupAwards.reversed</code> 設為 true。</p>
+</section>
+
+<!-- ================= 7 ================= -->
+<section class="chapter">
+<h2><span class="n">7</span>Firestore Security Rules</h2>
+<p>以下為設計階段的規則草案；<b>正式版規則以專案中的 <code>firestore.rules</code> 為準</b>（時間欄位改為毫秒數、教師可管理收款碼與刪除學生帳號），並已由 30 項規則測試於 Firebase 模擬器驗證（見測試紀錄）。</p>
+<pre>rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn()  { return request.auth != null; }
+    function userDoc(uid) { return get(/databases/$(db)/documents/users/$(uid)).data; }
+    function me()        { return userDoc(request.auth.uid); }
+    function isActive()  { return signedIn()
+                             &amp;&amp; exists(/databases/$(db)/documents/users/$(request.auth.uid))
+                             &amp;&amp; me().active == true; }
+    function isTeacher() { return isActive() &amp;&amp; me().role == 'teacher'; }
+    function isStudent() { return isActive() &amp;&amp; me().role == 'student'; }
+
+    <span class="cm">// ---------- 帳戶 ----------</span>
+    match /users/{uid} {
+      allow read:           if isTeacher() || (isStudent() &amp;&amp; request.auth.uid == uid);
+      allow create, update: if isTeacher();
+      allow delete:         if isTeacher() &amp;&amp; resource.data.role == 'student';  <span class="cm">// 交易紀錄保留</span>
+    }
+
+    <span class="cm">// ---------- 設定類：學生唯讀 ----------</span>
+    match /groups/{id}      { allow read: if isActive();  allow write: if isTeacher(); }
+    match /presets/{id}     { allow read:  if isTeacher()
+                                    || (isActive() &amp;&amp; resource.data.showToStudents == true
+                                                   &amp;&amp; resource.data.active == true);
+                              allow write: if isTeacher(); }
+    match /settings/{id}    { allow read: if isActive();  allow write: if isTeacher(); }
+    match /groupAwards/{id} { allow read, write: if isTeacher(); }
+
+    <span class="cm">// ---------- 一次性收款碼 ----------</span>
+    match /paymentCodes/{codeId} {
+      allow get:  if isStudent();
+      allow list: if false;                          <span class="cm">// 禁止列舉</span>
+      allow create: if isStudent()
+        &amp;&amp; codeId.matches('^[A-HJ-NP-Z2-9]{8}$')
+        &amp;&amp; request.resource.data.keys().hasOnly(['toUid','toName','toSeatNo','createdAt','expiresAt','used'])
+        &amp;&amp; request.resource.data.toUid    == request.auth.uid
+        &amp;&amp; request.resource.data.toName   == me().name
+        &amp;&amp; request.resource.data.toSeatNo == me().seatNo
+        &amp;&amp; request.resource.data.createdAt == request.time
+        &amp;&amp; request.resource.data.expiresAt &lt;= request.time + duration.value(10, 'm')
+        &amp;&amp; request.resource.data.used == false;
+      allow update: if isStudent()
+        &amp;&amp; resource.data.used == false
+        &amp;&amp; request.time &lt; resource.data.expiresAt
+        &amp;&amp; resource.data.toUid != request.auth.uid
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used','usedBy','txId'])
+        &amp;&amp; request.resource.data.used == true
+        &amp;&amp; request.resource.data.usedBy == request.auth.uid
+        &amp;&amp; getAfter(/databases/$(db)/documents/transactions/$(request.resource.data.txId))
+             .data.codeId == codeId;
+      allow delete: if isStudent() &amp;&amp; resource.data.toUid == request.auth.uid
+                      &amp;&amp; resource.data.used == false;
+    }
+
+    <span class="cm">// ---------- 帳本 ----------</span>
+    match /transactions/{txId} {
+      allow read:   if isTeacher() || (isStudent() &amp;&amp; request.auth.uid in resource.data.participants);
+      allow create: if isTeacher() || validTransferRequest(txId);
+      allow update: if isTeacher() &amp;&amp; validTeacherUpdate();
+      allow delete: if false;                         <span class="cm">// 帳本只增不刪</span>
+    }
+
+    function validTransferRequest(txId) {
+      let d      = request.resource.data;
+      let before = get(/databases/$(db)/documents/paymentCodes/$(d.codeId)).data;
+      let after  = getAfter(/databases/$(db)/documents/paymentCodes/$(d.codeId)).data;
+      return isStudent()
+        &amp;&amp; d.type == 'transfer' &amp;&amp; d.status == 'pending'
+        &amp;&amp; d.fromUid == request.auth.uid &amp;&amp; d.fromName == me().name
+        &amp;&amp; d.fromSeatNo == me().seatNo
+        &amp;&amp; d.amount is int &amp;&amp; d.amount &gt; 0 &amp;&amp; d.amount &lt;= me().balance
+        &amp;&amp; d.category in ['buy','repay','gift','other']
+        &amp;&amp; d.note is string &amp;&amp; d.note.size() &gt; 0 &amp;&amp; d.note.size() &lt;= 50
+        &amp;&amp; before.used == false &amp;&amp; request.time &lt; before.expiresAt
+        &amp;&amp; d.toUid == before.toUid &amp;&amp; d.toName == before.toName
+        &amp;&amp; d.toSeatNo == before.toSeatNo
+        &amp;&amp; d.toUid != request.auth.uid
+        &amp;&amp; userDoc(d.toUid).active == true
+        &amp;&amp; d.participants == [d.fromUid, d.toUid]
+        &amp;&amp; d.createdBy == request.auth.uid &amp;&amp; d.createdAt == request.time
+        &amp;&amp; !('balanceAfter' in d) &amp;&amp; d.reversalOf == null &amp;&amp; d.reversedBy == null
+        &amp;&amp; after.used == true &amp;&amp; after.usedBy == request.auth.uid &amp;&amp; after.txId == txId;
+    }
+
+    function validTeacherUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return !changed.hasAny(['type','amount','fromUid','toUid','participants',
+                              'createdBy','createdAt','reversalOf','batchId','codeId'])
+        <span class="cm">// 狀態只能 pending → approved / rejected</span>
+        &amp;&amp; (resource.data.status == 'pending' || !changed.hasAny(['status']))
+        <span class="cm">// reversedBy 只能由 null 設定一次</span>
+        &amp;&amp; (resource.data.reversedBy == null || !changed.hasAny(['reversedBy']));
+    }
+  }
+}</pre>
+<div class="box warn"><div class="h">已知限制</div>
+Rules 無法跨文件驗證「教師寫入的餘額是否等於帳本加總」。教師端以 <code>runTransaction</code> 保證一致，並提供對帳檢查（F-T14）偵測異常。教師帳號是唯一高權限帳號，須設定強密碼。</div>
+
+<h3>7.2 Rules 測試矩陣（節錄）</h3>
+<table class="t">
+  <tr><th>情境</th><th style="width:14%" class="c">預期</th></tr>
+  <tr><td>未登入讀取任何集合</td><td class="c">拒絕</td></tr>
+  <tr><td>已登入但不在名冊（自行註冊的帳號）讀取任何集合</td><td class="c">拒絕</td></tr>
+  <tr><td>停用學生讀取自己的帳戶</td><td class="c">拒絕</td></tr>
+  <tr><td>學生讀取他人 users 文件、或查詢不含自己的交易</td><td class="c">拒絕</td></tr>
+  <tr><td>學生修改自己的 balance / role / groupId</td><td class="c">拒絕</td></tr>
+  <tr><td>學生建立 reward / groupReward / reversal 交易</td><td class="c">拒絕</td></tr>
+  <tr><td>學生建立 status = approved 的轉帳</td><td class="c">拒絕</td></tr>
+  <tr><td>fromUid 不是自己；金額 0、負數、小數、字串；超過餘額</td><td class="c">拒絕</td></tr>
+  <tr><td>收款碼已用、過期、不存在、收款人不一致、付款給自己</td><td class="c">拒絕</td></tr>
+  <tr><td>只建立轉帳而未同批標記收款碼（或反之）</td><td class="c">拒絕</td></tr>
+  <tr><td>列舉 paymentCodes 集合</td><td class="c">拒絕</td></tr>
+  <tr><td>學生讀取未顯示於前台或已停用的 presets</td><td class="c">拒絕</td></tr>
+  <tr><td>學生查詢 presets 時未帶 showToStudents == true 條件</td><td class="c">拒絕</td></tr>
+  <tr><td>任何人刪除交易；學生刪除任何帳戶；教師刪除教師帳戶</td><td class="c">拒絕</td></tr>
+  <tr><td>教師修改已核准交易的 amount、或把 approved 改回 pending</td><td class="c">拒絕</td></tr>
+  <tr><td>學生以合法收款碼送出轉帳申請</td><td class="c">允許</td></tr>
+  <tr><td>收款人讀取轉入的交易（含審核中）與付款人讀取同一筆</td><td class="c">允許</td></tr>
+  <tr><td>學生讀取顯示於前台的加點項目與小確幸</td><td class="c">允許</td></tr>
+  <tr><td>教師核准、駁回、加扣點、沖正</td><td class="c">允許</td></tr>
+</table>
+</section>
+
+<!-- ================= 8 ================= -->
+<section class="chapter">
+<h2><span class="n">8</span>前端設計</h2>
+<h3>8.1 路由</h3>
+<table class="t">
+  <tr><th style="width:28%">路徑（Hash）</th><th style="width:14%">角色</th><th>頁面</th></tr>
+  <tr><td><code>#/login</code></td><td>公開</td><td>登入</td></tr>
+  <tr><td><code>#/</code></td><td>學生</td><td>首頁</td></tr>
+  <tr><td><code>#/history</code>、<code>#/tx/:id</code></td><td>學生</td><td>交易明細、單筆詳情（轉帳雙方皆可開啟）</td></tr>
+  <tr><td><code>#/perks</code></td><td>學生</td><td>點數規則與小確幸</td></tr>
+  <tr><td><code>#/receive</code></td><td>學生</td><td>收款（顯示 QR）</td></tr>
+  <tr><td><code>#/pay?c=CODE</code></td><td>學生</td><td>付款（掃描或帶入代碼）</td></tr>
+  <tr><td><code>#/me</code></td><td>學生</td><td>個人資料、修改密碼</td></tr>
+  <tr><td><code>#/t</code></td><td>教師</td><td>儀表板</td></tr>
+  <tr><td><code>#/t/approvals</code></td><td>教師</td><td>轉帳審核</td></tr>
+  <tr><td><code>#/t/students</code>、<code>#/t/students/:uid</code></td><td>教師</td><td>學生總覽、個人頁</td></tr>
+  <tr><td><code>#/t/adjust</code>、<code>#/t/batch</code></td><td>教師</td><td>個別加扣點、批次加扣點</td></tr>
+  <tr><td><code>#/t/group-award</code></td><td>教師</td><td>小組獎勵與歷史</td></tr>
+  <tr><td><code>#/t/ledger</code></td><td>教師</td><td>交易紀錄、沖正、匯出</td></tr>
+  <tr><td><code>#/t/presets</code>、<code>#/t/groups</code>、<code>#/t/accounts</code>、<code>#/t/settings</code></td><td>教師</td><td>加點項目與小確幸、分組、帳號、設定</td></tr>
+</table>
+<p>路由守衛：未登入導向 <code>#/login</code>；學生進入 <code>#/t/*</code> 導回 <code>#/</code>；教師登入後預設進入 <code>#/t</code>。</p>
+
+<h3>8.2 即時資料訂閱</h3>
+<table class="t">
+  <tr><th style="width:28%">訂閱</th><th>查詢</th><th style="width:22%">使用頁面</th></tr>
+  <tr><td>我的帳戶</td><td><code>doc(users/{uid})</code></td><td>學生全頁面</td></tr>
+  <tr><td>我的交易</td><td><code>participants array-contains uid, orderBy createdAt desc, limit 30</code></td><td>首頁、明細</td></tr>
+  <tr><td>收款碼狀態</td><td><code>doc(paymentCodes/{codeId})</code></td><td>收款頁</td></tr>
+  <tr><td>待審核</td><td><code>status == 'pending', orderBy createdAt</code></td><td>教師全頁面（徽章）</td></tr>
+  <tr><td>全班帳戶</td><td><code>users where role == 'student'</code></td><td>教師後台</td></tr>
+  <tr><td>小確幸與加點項目</td><td><code>presets where showToStudents == true and active == true, orderBy sortOrder</code></td><td>學生「點數規則與小確幸」</td></tr>
+</table>
+
+<h3>8.3 響應式版面（學生可用 iPad 或電腦）</h3>
+<table class="t">
+  <tr><th style="width:26%">寬度</th><th style="width:26%">典型裝置</th><th>版面</th></tr>
+  <tr><td>&lt; 768px</td><td>iPad 分割畫面</td><td>單欄，收款 / 付款按鈕並排</td></tr>
+  <tr><td>768～1023px</td><td>iPad 直向</td><td>單欄，大按鈕，明細在下方</td></tr>
+  <tr><td>≥ 1024px</td><td>iPad 橫向、電腦</td><td>雙欄：左側餘額與操作，右側明細</td></tr>
+</table>
+<p>觸控與滑鼠共用同一套元件；電腦上以 hover 狀態補充提示，但不依賴 hover 才能操作。</p>
+
+<h3>8.4 交易詳情頁</h3>
+<p>付款人與收款人開啟同一筆轉帳時看到相同內容，只有方向用語不同（「轉出給」或「收到來自」）：</p>
+<ul>
+  <li>對象姓名與座號（取自 <code>fromName / toName / fromSeatNo / toSeatNo</code>）</li>
+  <li>分類、事由、金額</li>
+  <li>狀態時間軸：送出 → 審核中 → 已核准 / 已駁回（含原因）→ 已沖正（如有）</li>
+  <li>交易編號</li>
+</ul>
+
+<h3>8.5 視覺實作</h3>
+<ul>
+  <li>Tailwind 設計權杖依 PRD 第 10 章：
+    <ul>
+      <li><code>brand #06C755</code>、<code>brand-dark #04803A</code>、<code>ink #0B3D22</code>、<code>brand-soft #E8F8EE</code></li>
+      <li>支出 <code>#B42318</code>、審核中 <code>#B45309</code></li>
+    </ul>
+  </li>
+  <li>logo 應用：
+    <ul>
+      <li>登入頁 120px、頁首 36px</li>
+      <li>favicon</li>
+      <li><code>apple-touch-icon</code> 180×180，以原始 logo 縮放產生</li>
+      <li><code>manifest.webmanifest</code>：<code>theme_color #06C755</code>、<code>display: standalone</code></li>
+    </ul>
+  </li>
+  <li>字型：系統字型堆疊 <code>-apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif</code>；金額使用 <code>font-variant-numeric: tabular-nums</code>。</li>
+  <li>金額格式化集中於 <code>domain/money.ts</code>：<code>Intl.NumberFormat('zh-TW')</code>。</li>
+</ul>
+</section>
+
+<!-- ================= 9 ================= -->
+<section class="chapter">
+<h2><span class="n">9</span>QR 收付款設計</h2>
+<h3>9.1 收款碼產生</h3>
+<pre>const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';        <span class="cm">// 32 字，去除 I O 0 1</span>
+function newCodeId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes, b =&gt; ALPHABET[b &amp; 31]).join('');
+}
+<span class="cm">// 建立：setDoc(paymentCodes/{id}, {..., createdAt: serverTimestamp(),</span>
+<span class="cm">//        expiresAt: Timestamp.fromMillis(Date.now() + ttl)})</span>
+<span class="cm">// ID 碰撞時 create 會被 Rules 視為 update 而拒絕 → 換一個 ID 重試</span></pre>
+<ul>
+  <li>QR 內容為網址：<code>https://&lt;帳號&gt;.github.io/&lt;repo&gt;/#/pay?c=ABCD2345</code>。用 App 內掃描器或 iPad 內建相機掃描都能直接開到付款頁。</li>
+  <li><code>expiresAt</code> 由用戶端計算，但 Rules 限制不得超過伺服器時間加 10 分鐘；有效性一律以伺服器時間判斷。</li>
+  <li>收款頁監聽該文件：<code>used</code> 變為 true 時，讀取 <code>txId</code> 對應的交易，顯示付款人與金額。</li>
+  <li>離開頁面（<code>onUnmounted</code>、<code>visibilitychange</code>）時，刪除未使用的收款碼。</li>
+</ul>
+<h3>9.2 掃描</h3>
+<ul>
+  <li>使用 <code>qr-scanner</code>：
+    <ul>
+      <li>iPad 指定後鏡頭 <code>preferredCamera: 'environment'</code>；電腦使用預設視訊鏡頭。</li>
+      <li>先以 <code>QrScanner.hasCamera()</code> 偵測：沒有鏡頭（多數桌機）時，付款頁預設顯示「輸入 8 碼收款代碼」。</li>
+      <li>代碼輸入框自動轉大寫、忽略空白，並即時檢查格式。</li>
+    </ul>
+  </li>
+  <li>必須在 HTTPS 下執行（GitHub Pages 預設為 HTTPS）；iPadOS「加入主畫面」模式亦支援相機。</li>
+  <li>掃描結果只接受本站網址或 8 碼代碼格式，其他內容一律忽略，防止被導向外部網站。</li>
+  <li>取得代碼後 <code>getDoc(paymentCodes/{c})</code>：
+    <ul>
+      <li>不存在、已使用或已過期 → 顯示錯誤。</li>
+      <li>有效 → 顯示收款人姓名與座號，進入填寫步驟。</li>
+    </ul>
+  </li>
+</ul>
+</section>
+
+<!-- ================= 10 ================= -->
+<section class="chapter cont">
+<h2><span class="n">10</span>錯誤處理</h2>
+<table class="t">
+  <tr><th style="width:30%">錯誤碼</th><th>使用者看到的訊息</th></tr>
+  <tr><td><code>INSUFFICIENT_BALANCE</code></td><td>餘額不足（目前 ○○ 點）</td></tr>
+  <tr><td><code>ALREADY_DECIDED</code></td><td>這筆申請已經處理過了</td></tr>
+  <tr><td><code>CODE_INVALID</code></td><td>此收款碼已使用或已失效，請對方重新產生</td></tr>
+  <tr><td><code>ALREADY_REVERSED</code></td><td>這筆交易已經沖正過了</td></tr>
+  <tr><td><code>NEGATIVE_AFTER_REVERSAL</code></td><td>○○○ 的餘額不足，無法沖正</td></tr>
+  <tr><td><code>permission-denied</code></td><td>沒有權限執行此操作（並記錄於主控台）</td></tr>
+  <tr><td><code>unavailable</code>（離線）</td><td>網路連線中斷，請稍後再試</td></tr>
+  <tr><td><code>auth/invalid-credential</code></td><td>學號或密碼錯誤</td></tr>
+  <tr><td><code>auth/too-many-requests</code></td><td>嘗試次數過多，請稍後再試</td></tr>
+</table>
+<p>Firestore 離線寫入快取關閉（<code>memoryLocalCache</code>）：交易類操作必須即時確認成功，不允許離線排隊。</p>
+</section>
+
+<!-- ================= 11 ================= -->
+<section class="chapter">
+<h2><span class="n">11</span>部署與環境</h2>
+<table class="t">
+  <tr><th style="width:18%">環境</th><th>說明</th></tr>
+  <tr><td>本機開發</td><td><code>npm run dev</code> 搭配 Firebase Emulator（Auth、Firestore），測試資料由 seed 腳本產生。</td></tr>
+  <tr><td>正式環境</td><td>GitHub Pages 加上 Firebase 正式專案。</td></tr>
+</table>
+<h3>11.1 CI/CD（GitHub Actions）</h3>
+<pre class="light">on: push (main)
+jobs:
+  test:   npm ci → lint → typecheck → vitest(unit)
+          → firebase emulators:exec "vitest rules + integration"
+          → playwright (webkit iPad、chromium desktop)
+  deploy: needs test → vite build (base='/&lt;repo&gt;/') → actions/deploy-pages</pre>
+<ul>
+  <li>Firebase 前端設定（apiKey 等）存於 repo Variables，建置時注入 <code>VITE_FIREBASE_*</code>。此設定本來就公開於前端，安全性由 Rules 與 App Check 保障。</li>
+  <li>Security Rules 與索引由教師電腦手動部署：<code>firebase deploy --only firestore</code>，部署前須先通過 Rules 測試。</li>
+  <li>Firebase Auth「授權網域」須加入 <code>&lt;帳號&gt;.github.io</code>。</li>
+</ul>
+</section>
+
+<!-- ================= 12 ================= -->
+<section class="chapter">
+<h2><span class="n">12</span>安全設計</h2>
+<table class="t">
+  <tr><th style="width:24%">威脅</th><th>對策</th></tr>
+  <tr><td>學生竄改前端直接改餘額</td><td>Rules：<code>users</code> 只有教師可寫；學生只能建立 pending 轉帳。</td></tr>
+  <tr><td>重複使用 QR 碼、截圖轉傳</td><td>一次性收款碼 + 伺服器時間過期 + 與轉帳同批寫入（<code>getAfter</code>）。</td></tr>
+  <tr><td>猜測收款碼</td><td>40 bits 隨機、禁止列舉、3 分鐘失效。</td></tr>
+  <tr><td>重複核准、同時核准</td><td><code>runTransaction</code> 檢查 status == pending，衝突時自動重試。</td></tr>
+  <tr><td>偷看他人資料</td><td>Rules 以 <code>participants</code> 與 uid 限制讀取；收款人資訊以快照存於收款碼，不需讀取他人帳戶。</td></tr>
+  <tr><td>從交易資料推算對方餘額</td><td>交易文件不存餘額快照；Rules 禁止學生寫入 <code>balanceAfter</code>；結餘由前端依本人資料推算。</td></tr>
+  <tr><td>自行註冊帳號</td><td>名冊制：不在 <code>users</code> 或未啟用者無任何權限。</td></tr>
+  <tr><td>濫用 API 金鑰、機器人</td><td>Firebase App Check（reCAPTCHA v3）強制驗證 Firestore 請求；於 Google Cloud 限制 API 金鑰的 HTTP referrer。</td></tr>
+  <tr><td>XSS</td><td>Vue 預設跳脫輸出、禁用 <code>v-html</code>；目的與原因欄位限制 50 字；CSP meta 限制資源來源。</td></tr>
+  <tr><td>暴力破解密碼</td><td>Firebase Auth 內建節流；密碼至少 6 碼；登入錯誤訊息不透露細節。</td></tr>
+  <tr><td>管理金鑰外洩</td><td><code>service-account.json</code> 列入 <code>.gitignore</code>，只存在教師電腦；CI 不使用。</td></tr>
+  <tr><td>相依套件漏洞</td><td>Dependabot、<code>npm audit</code>。</td></tr>
+  <tr><td>教師帳號被盜</td><td>強密碼；建議教師帳號於 Firebase 啟用多重驗證（需評估方案支援度）；定期匯出備份。</td></tr>
+</table>
+<h3>12.1 CSP（初稿）</h3>
+<pre class="light">default-src 'self';
+script-src 'self' https://www.google.com https://www.gstatic.com;
+connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://www.google.com;
+frame-src https://www.google.com https://*.firebaseapp.com;
+img-src 'self' data: blob:;  style-src 'self' 'unsafe-inline';  worker-src 'self' blob:;</pre>
+</section>
+
+<!-- ================= 13 ================= -->
+<section class="chapter">
+<h2><span class="n">13</span>測試策略</h2>
+<table class="t">
+  <tr><th style="width:16%">層級</th><th style="width:24%">工具</th><th>範圍</th></tr>
+  <tr><td>單元</td><td>Vitest</td><td>
+    <ul style="margin:0">
+      <li><code>domain/*</code>：金額驗證、CSV 解析（重複學號、缺欄、BOM、全形）、日期與本週區間、收款碼格式。</li>
+      <li>元件：付款表單驗證、倒數失效。</li>
+    </ul>
+  </td></tr>
+  <tr><td>Rules</td><td>@firebase/rules-unit-testing + Emulator</td><td>7.2 測試矩陣全部項目，每條規則都有允許與拒絕案例。</td></tr>
+  <tr><td>整合</td><td>Vitest + Emulator</td><td>
+    <ul style="margin:0">
+      <li>核准、駁回，以及並行核准同一筆（只成功一次）。</li>
+      <li>原子性：以 Emulator 模擬在交易中途拋錯或斷線，驗證所有相關文件都維持原狀。</li>
+      <li>超額申請逐筆核准。</li>
+      <li>批次加扣點、小組獎勵（並列、請假、重複日期）。</li>
+      <li>單筆與整批沖正、沖正後負餘額阻擋。</li>
+      <li>收款碼生命週期；對帳：帳本加總等於餘額。</li>
+    </ul>
+  </td></tr>
+  <tr><td>端對端</td><td>Playwright（WebKit iPad 設定檔；Chromium 桌面，學生與教師）</td><td>
+    <ul style="margin:0">
+      <li>教師匯入學生 → 批次加點 → 學生 A 收款、學生 B 付款（以注入代碼取代相機）→ A 畫面即時更新 → 教師核准 → 餘額與明細驗證 → 沖正還原。</li>
+      <li>學生開啟教師路由被導回。</li>
+      <li>學生以電腦（無鏡頭）輸入代碼付款；轉帳雙方開啟詳情頁內容一致。</li>
+      <li>老師新增小確幸後，學生前台即時出現；下架後消失。</li>
+    </ul>
+  </td></tr>
+  <tr><td>安全</td><td>手動滲透檢查</td><td>以學生帳號在瀏覽器主控台直接呼叫 SDK，嘗試 7.2 的所有攻擊；檢查 CSP 與 XSS。</td></tr>
+  <tr><td>實機驗收</td><td>真實 iPad</td><td>相機權限、加入主畫面、直橫向、校園 Wi-Fi 下的載入速度。</td></tr>
+</table>
+<p>合併到 main 前，全部自動化測試必須通過；Rules 測試覆蓋 <code>firestore.rules</code> 中每一個 <code>allow</code> 敘述。</p>
+</section>
+
+<!-- ================= 14 ================= -->
+<section class="chapter cont">
+<h2><span class="n">14</span>容量與配額估算（Spark 免費方案）</h2>
+<table class="t">
+  <tr><th>項目</th><th style="width:22%">每日估算</th><th style="width:22%">免費額度</th><th style="width:12%" class="c">占比</th></tr>
+  <tr><td>文件讀取：31 人 × 每日 4 次開啟 × 約 40 筆，加上教師後台約 3,000</td><td>約 8,000</td><td>50,000</td><td class="c">16%</td></tr>
+  <tr><td>文件寫入：加扣點、小組獎勵、轉帳約 150 筆 × 2～3 寫入</td><td>約 500</td><td>20,000</td><td class="c">3%</td></tr>
+  <tr><td>刪除（收款碼）</td><td>約 50</td><td>20,000</td><td class="c">&lt;1%</td></tr>
+  <tr><td>儲存：約 2 萬筆交易 / 學期 × 1 KB</td><td>約 20 MB / 學期</td><td>1 GB</td><td class="c">2%</td></tr>
+  <tr><td>Auth 使用者</td><td>32</td><td>不限（電子郵件登入）</td><td class="c">—</td></tr>
+</table>
+<p class="small muted">GitHub Pages：每月 100 GB 流量、網站 1 GB，本系統打包後約 1 MB，遠低於上限。</p>
+</section>
+
+<!-- ================= 15 ================= -->
+<section class="chapter">
+<h2><span class="n">15</span>維運、備份與管理腳本</h2>
+<h3>15.1 管理腳本 scripts/admin.mjs（教師電腦執行）</h3>
+<table class="t">
+  <tr><th style="width:44%">指令</th><th>用途</th></tr>
+  <tr><td><code>init-teacher &lt;email&gt;</code></td><td>將既有 Auth 帳號設為教師（首次建置）</td></tr>
+  <tr><td><code>reset-password &lt;學號&gt; &lt;新密碼&gt;</code></td><td>重設學生密碼</td></tr>
+  <tr><td><code>backup [輸出資料夾]</code></td><td>匯出全部集合為 JSON</td></tr>
+  <tr><td><code>reconcile</code></td><td>對帳：比對帳本加總與餘額</td></tr>
+</table>
+<h3>15.2 備份策略</h3>
+<ul>
+  <li>Spark 方案不支援排程匯出，因此提供兩種手動備份：後台「全資料備份」按鈕（Excel / JSON）與管理腳本 <code>backup</code>。</li>
+  <li>建議每月初與學期末各備份一次，存於學校雲端硬碟。</li>
+</ul>
+<h3>15.3 監控</h3>
+<ul>
+  <li>Firebase Console 用量頁面；接近額度 80% 時檢查是否有異常讀取。</li>
+  <li>後台對帳檢查（F-T14）每週執行一次。</li>
+</ul>
+</section>
+
+<!-- ================= 16 ================= -->
+<section class="chapter cont">
+<h2><span class="n">16</span>風險與對策</h2>
+<table class="t">
+  <tr><th style="width:28%">風險</th><th style="width:12%" class="c">影響</th><th>對策</th></tr>
+  <tr><td>Security Rules 寫錯導致漏洞</td><td class="c">高</td><td>完整 Rules 測試矩陣、CI 強制通過、上線前手動滲透檢查</td></tr>
+  <tr><td>教師端錯誤造成餘額與帳本不一致</td><td class="c">中</td><td>所有餘額變動走 <code>runTransaction</code>；對帳檢查；沖正機制修正</td></tr>
+  <tr><td>免費方案無法在網頁上重設密碼</td><td class="c">低</td><td>本機管理腳本；未來可升級 Blaze 改用 Cloud Functions</td></tr>
+  <tr><td>iPad 相機權限被拒或掃描失敗</td><td class="c">低</td><td>8 碼代碼手動輸入備援；權限說明頁</td></tr>
+  <tr><td>校園網路不穩</td><td class="c">中</td><td>明確的離線提示；交易操作不允許離線排隊，避免重複送出</td></tr>
+  <tr><td>Firebase 或 GitHub 服務中斷</td><td class="c">低</td><td>定期備份；中斷期間暫以紙本記錄，恢復後由教師補登</td></tr>
+  <tr><td>學生共用或外流密碼</td><td class="c">中</td><td>轉帳需教師審核；可重設密碼、停用帳號；明細可追溯</td></tr>
+</table>
+</section>
+
+</body>
+</html>

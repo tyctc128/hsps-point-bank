@@ -1,0 +1,106 @@
+// HSPS 點數銀行：Firestore Security Rules（移植到 Firebase 時使用，對應 SDD 第 7 章）
+// 目前系統使用模擬資料庫，這份規則與 src/api/mock/mockApi.ts 的權限檢查一一對應。
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn()   { return request.auth != null; }
+    function userDoc(uid) { return get(/databases/$(db)/documents/users/$(uid)).data; }
+    function me()         { return userDoc(request.auth.uid); }
+    function isActive()   { return signedIn()
+                              && exists(/databases/$(db)/documents/users/$(request.auth.uid))
+                              && me().active == true; }
+    function isTeacher()  { return isActive() && me().role == 'teacher'; }
+    function isStudent()  { return isActive() && me().role == 'student'; }
+    // 時間欄位以毫秒數（int）儲存；由用戶端填入，規則要求與伺服器時間相差 5 分鐘內
+    function nowMs()      { return request.time.toMillis(); }
+    function recent(t)    { return t is int && t > nowMs() - 300000 && t < nowMs() + 300000; }
+
+    // ---------- 帳戶 ----------
+    match /users/{uid} {
+      // 本人一律可讀自己的帳戶（停用時才能顯示「帳號已停用」）
+      allow read:           if isTeacher() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if isTeacher();
+      // 教師可刪除學生帳號；交易紀錄保留。Firebase Auth 登入帳號需另以 Admin SDK 腳本刪除。
+      allow delete:         if isTeacher() && resource.data.role == 'student';
+    }
+
+    // ---------- 設定類 ----------
+    match /groups/{id}      { allow read: if isActive();  allow write: if isTeacher(); }
+    match /settings/{id}    { allow read: if isActive();  allow write: if isTeacher(); }
+    match /groupAwards/{id} { allow read, write: if isTeacher(); }
+
+    // 加點項目與小確幸：學生只讀得到「啟用」且「顯示於前台」者
+    match /presets/{id} {
+      allow read:  if isTeacher()
+                   || (isActive() && resource.data.showToStudents == true && resource.data.active == true);
+      allow write: if isTeacher();
+    }
+
+    // ---------- 一次性收款碼 ----------
+    match /paymentCodes/{codeId} {
+      allow get:  if isStudent() || isTeacher();
+      allow list: if isTeacher();                     // 學生禁止列舉
+      allow create: if isStudent()
+        && codeId.matches('^[A-HJ-NP-Z2-9]{8}$')
+        && request.resource.data.keys().hasOnly(['toUid', 'toName', 'toSeatNo', 'createdAt', 'expiresAt', 'used', 'usedBy', 'txId'])
+        && request.resource.data.toUid    == request.auth.uid
+        && request.resource.data.toName   == me().name
+        && request.resource.data.toSeatNo == me().seatNo
+        && recent(request.resource.data.createdAt)
+        && request.resource.data.expiresAt is int
+        && request.resource.data.expiresAt <= request.resource.data.createdAt + 600000
+        && request.resource.data.used == false
+        && request.resource.data.usedBy == null
+        && request.resource.data.txId == null;
+      allow update: if isStudent()
+        && resource.data.used == false
+        && nowMs() < resource.data.expiresAt
+        && resource.data.toUid != request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used', 'usedBy', 'txId'])
+        && request.resource.data.used == true
+        && request.resource.data.usedBy == request.auth.uid
+        && getAfter(/databases/$(db)/documents/transactions/$(request.resource.data.txId)).data.codeId == codeId;
+      allow delete: if isTeacher()
+                    || (isStudent() && resource.data.toUid == request.auth.uid && resource.data.used == false);
+    }
+
+    // ---------- 帳本：只增不刪 ----------
+    match /transactions/{txId} {
+      allow read:   if isTeacher() || (isStudent() && request.auth.uid in resource.data.participants);
+      allow create: if isTeacher() || validTransferRequest(txId);
+      allow update: if isTeacher() && validTeacherUpdate();
+      allow delete: if false;
+    }
+
+    function validTransferRequest(txId) {
+      let d      = request.resource.data;
+      let before = get(/databases/$(db)/documents/paymentCodes/$(d.codeId)).data;
+      let after  = getAfter(/databases/$(db)/documents/paymentCodes/$(d.codeId)).data;
+      return isStudent()
+        && d.type == 'transfer' && d.status == 'pending'
+        && d.fromUid == request.auth.uid && d.fromName == me().name && d.fromSeatNo == me().seatNo
+        && d.amount is int && d.amount > 0 && d.amount <= me().balance && d.amount <= 1000000
+        && d.category in ['buy', 'repay', 'gift', 'other']
+        && d.note is string && d.note.size() > 0 && d.note.size() <= 50
+        && before.used == false && nowMs() < before.expiresAt
+        && d.toUid == before.toUid && d.toName == before.toName && d.toSeatNo == before.toSeatNo
+        && d.toUid != request.auth.uid
+        && userDoc(d.toUid).active == true
+        && d.participants == [d.fromUid, d.toUid]
+        && d.createdBy == request.auth.uid && recent(d.createdAt)
+        && !('balanceAfter' in d)
+        && d.reversalOf == null && d.reversedBy == null && d.batchId == null
+        && d.decidedBy == null && d.decidedAt == null && d.rejectReason == null
+        && after.used == true && after.usedBy == request.auth.uid && after.txId == txId;
+    }
+
+    function validTeacherUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return !changed.hasAny(['type', 'amount', 'fromUid', 'toUid', 'participants',
+                              'createdBy', 'createdAt', 'reversalOf', 'batchId', 'codeId'])
+        && (resource.data.status == 'pending' || !changed.hasAny(['status']))
+        && (resource.data.reversedBy == null || !changed.hasAny(['reversedBy']));
+    }
+  }
+}
