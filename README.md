@@ -31,7 +31,8 @@
 | `npm run admin -- import account.xlsx` | 由名冊建立學生帳號（已存在者略過） |
 | `npm run admin -- reset-password <帳號> <新密碼>` | 重設學生密碼 |
 | `npm run admin -- delete-orphans [--yes]` | 刪除「網頁上已刪除學生」的登入帳號 |
-| `npm run admin -- backup` | 備份全部資料到 `backups/` |
+| `npm run admin -- backup [--label 名稱]` | 備份全部資料到 `backups/` |
+| `npm run admin -- restore <備份檔> --yes` | 將資料完全還原成備份時的狀態（不加 --yes 只預覽） |
 | `npm run admin -- status` | 帳號與交易數量 |
 | `npm run admin -- deploy-rules` | 發布 `firestore.rules` |
 | `npm run admin -- init-teacher --name 導師` | 建立 / 重設教師帳號（新密碼寫入 teacher-account.txt） |

@@ -176,15 +176,56 @@ export async function deployRules(ctx: AdminCtx, file = 'firestore.rules') {
   return ruleset.name
 }
 
-export async function backup(ctx: AdminCtx, dir: string) {
-  fs.mkdirSync(dir, { recursive: true })
-  const out: Record<string, unknown> = {}
-  for (const col of ['users', 'transactions', 'presets', 'groups', 'groupAwards', 'settings']) {
+export const BACKUP_COLLECTIONS = ['users', 'transactions', 'paymentCodes', 'presets', 'groups', 'groupAwards', 'settings'] as const
+
+export async function snapshot(ctx: AdminCtx): Promise<Record<string, Record<string, unknown>>> {
+  const out: Record<string, Record<string, unknown>> = {}
+  for (const col of BACKUP_COLLECTIONS) {
     const snap = await ctx.db.collection(col).get()
     out[col] = Object.fromEntries(snap.docs.map((d) => [d.id, d.data()]))
   }
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
-  const file = path.join(dir, `backup-${stamp}.json`)
+  return out
+}
+
+export async function backup(ctx: AdminCtx, dir: string, label = 'backup') {
+  fs.mkdirSync(dir, { recursive: true })
+  const out = { ...(await snapshot(ctx)), _meta: { project: ctx.app.options.projectId ?? null, createdAt: new Date().toISOString() } }
+  const stamp = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 19).replace(/[:T]/g, '-')
+  const file = path.join(dir, `${label}-${stamp}.json`)
   fs.writeFileSync(file, JSON.stringify(out, null, 2))
   return file
+}
+
+export interface RestoreSummary {
+  collections: Record<string, { restored: number; removed: number }>
+  missingLogins: string[]
+}
+
+/**
+ * 將資料庫完全還原成備份檔的狀態：備份中有的文件覆寫回去，備份中沒有的文件（例如測試期間新增的交易）刪除。
+ * 登入帳號（Firebase Auth）與密碼不受影響；回報備份中有、但登入帳號已不存在的學生。
+ */
+export async function restore(ctx: AdminCtx, data: Record<string, Record<string, Record<string, unknown>> | unknown>): Promise<RestoreSummary> {
+  const summary: RestoreSummary = { collections: {}, missingLogins: [] }
+  for (const col of BACKUP_COLLECTIONS) {
+    const wanted = (data[col] ?? {}) as Record<string, Record<string, unknown>>
+    const current = await ctx.db.collection(col).get()
+    const ops: ((b: FirebaseFirestore.WriteBatch) => void)[] = []
+    let removed = 0
+    for (const d of current.docs) {
+      if (!(d.id in wanted)) { ops.push((b) => b.delete(d.ref)); removed++ }
+    }
+    for (const [id, doc] of Object.entries(wanted)) ops.push((b) => b.set(ctx.db.collection(col).doc(id), doc))
+    for (let i = 0; i < ops.length; i += 400) {
+      const b = ctx.db.batch()
+      for (const op of ops.slice(i, i + 400)) op(b)
+      await b.commit()
+    }
+    summary.collections[col] = { restored: Object.keys(wanted).length, removed }
+  }
+  const users = (data.users ?? {}) as Record<string, Record<string, unknown>>
+  for (const [uid, u] of Object.entries(users)) {
+    try { await ctx.auth.getUser(uid) } catch { summary.missingLogins.push(String(u.account ?? uid)) }
+  }
+  return summary
 }

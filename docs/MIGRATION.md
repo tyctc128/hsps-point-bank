@@ -31,6 +31,7 @@
 | 學生忘記密碼 | `npm run admin -- reset-password <帳號> <新密碼>` |
 | 新學生轉入 | 後台「帳號管理」匯入或新增；或 `npm run admin -- import 新名冊.xlsx` |
 | 學生轉出 | 後台「學生總覽」停用（保留紀錄）或刪除；刪除後執行 `npm run admin -- delete-orphans --yes` 清除登入帳號 |
+| 測試後恢復原狀 | 測試前 `npm run admin -- backup --label baseline` → 測試 → `npm run admin -- restore backups/baseline-….json --yes`（還原前會自動另存目前狀態） |
 | 每月備份 | `npm run admin -- backup`（或後台「設定與備份 → 下載全部資料」） |
 | 修改權限規則 | 編輯 `firestore.rules` → `npm run test:firebase` 通過 → `npm run admin -- deploy-rules` |
 | 更新網站 | push 到 `main`，GitHub Actions 全部測試通過後自動部署 |

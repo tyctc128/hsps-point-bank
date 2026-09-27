@@ -4,12 +4,13 @@
 //   npm run admin -- reset-password <帳號> <新密碼>
 //   npm run admin -- delete-orphans [--yes]
 //   npm run admin -- backup [資料夾]
+//   npm run admin -- restore <備份檔> --yes
 //   npm run admin -- status
 //   npm run admin -- deploy-rules
 import * as fs from 'node:fs'
 import * as XLSX from 'xlsx'
 import { parseRoster } from '../src/domain/roster'
-import { backup, close, connect, deleteOrphans, deployRules, importRoster, initTeacher, randomPassword, readEnvFile, resetPassword } from './admin-core'
+import { backup, close, connect, deleteOrphans, deployRules, importRoster, initTeacher, randomPassword, readEnvFile, resetPassword, restore } from './admin-core'
 
 const env = { ...readEnvFile('.env.production'), ...process.env }
 const args = process.argv.slice(2)
@@ -26,6 +27,7 @@ function usage() {
   npm run admin -- reset-password <帳號> <新密碼>                    重設學生密碼
   npm run admin -- delete-orphans [--yes]                           刪除已從名冊刪除的學生登入帳號（不加 --yes 只列出）
   npm run admin -- backup [資料夾]                                   備份全部資料為 JSON（預設 backups/）
+  npm run admin -- restore <備份檔> [--yes]                          將資料完全還原成備份時的狀態（不加 --yes 只顯示差異）
   npm run admin -- status                                           顯示帳號與交易數量
   npm run admin -- deploy-rules                                     發布 firestore.rules 權限規則`)
 }
@@ -77,13 +79,36 @@ async function main() {
         break
       }
       case 'backup': {
-        const file = await backup(ctx, args[1] ?? 'backups')
+        const label = args.includes('--label') ? flag('label')! : 'backup'
+        const dir = args[1] && !args[1].startsWith('--') ? args[1] : 'backups'
+        const file = await backup(ctx, dir, label)
         console.log(`✔ 已備份到 ${file}`)
         break
       }
       case 'deploy-rules': {
         const name = await deployRules(ctx)
         console.log(`✔ 已發布權限規則：${name}`)
+        break
+      }
+      case 'restore': {
+        const file = args[1]
+        if (!file || !fs.existsSync(file)) throw new Error('請指定備份檔，例如：npm run admin -- restore backups/baseline-2026-09-27-10-00-00.json --yes')
+        const data = JSON.parse(fs.readFileSync(file, 'utf8'))
+        const proj = data._meta?.project
+        if (proj && proj !== ctx.app.options.projectId) throw new Error(`備份檔屬於專案 ${proj}，與目前專案 ${ctx.app.options.projectId} 不同`)
+        const cur = await ctx.db.collection('transactions').count().get()
+        const want = Object.keys(data.transactions ?? {}).length
+        console.log(`目前交易 ${cur.data().count} 筆 → 還原後 ${want} 筆；學生 ${Object.values(data.users ?? {}).filter((u: any) => u.role === 'student').length} 位`)
+        if (!args.includes('--yes')) {
+          console.log('（預覽）加上 --yes 才會執行還原。還原前會自動另存目前狀態到 backups/before-restore-*.json')
+          break
+        }
+        const safety = await backup(ctx, 'backups', 'before-restore')
+        console.log(`已先保存目前狀態：${safety}`)
+        const r = await restore(ctx, data)
+        for (const [col, v] of Object.entries(r.collections)) console.log(`  ${col.padEnd(14)} 還原 ${v.restored} 筆，移除 ${v.removed} 筆`)
+        if (r.missingLogins.length) console.log(`  ⚠ 以下帳號的登入資料已不存在，請重新匯入名冊：${r.missingLogins.join('、')}`)
+        console.log('✔ 已還原完成。學生與老師的 iPad 重新整理即可看到還原後的狀態。')
         break
       }
       case 'status': {
