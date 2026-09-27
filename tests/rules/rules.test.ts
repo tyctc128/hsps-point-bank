@@ -213,4 +213,8 @@ describe('加點項目與小確幸', () => {
     await assertSucceeds(setDoc(doc(as('t1'), 'presets/p3'), { kind: 'add', name: 'x', description: '', amount: 1, icon: 'star', sortOrder: 3, active: true, showToStudents: true }))
     await assertFails(getDocs(collection(as('s1'), 'groupAwards')))
   })
+  it('只有教師能刪除項目', async () => {
+    await assertFails(deleteDoc(doc(as('s1'), 'presets/p1')))
+    await assertSucceeds(deleteDoc(doc(as('t1'), 'presets/p1')))
+  })
 })

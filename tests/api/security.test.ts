@@ -64,6 +64,7 @@ describe('權限：學生不能執行教師操作', () => {
       ['exportAll', () => s.exportAll()],
       ['setStudentsActive', () => s.setStudentsActive([me], false)],
       ['deleteStudents', () => s.deleteStudents([me])],
+      ['deletePreset', () => s.deletePreset('x')],
     ]
     for (const [name, call] of calls) {
       const e = await call().then(() => null, (err) => err)
@@ -127,6 +128,23 @@ describe('權限：加點項目與小確幸的可見性', () => {
   })
 })
 
+describe('刪除加點項目與小確幸', () => {
+  it('老師刪除後，學生不再看到；已發生的交易仍保留項目名稱；學生不能刪除', async () => {
+    const w = await makeWorld(1)
+    const s1 = await w.as('s01')
+    const p = await w.teacher.savePreset({ kind: 'add', name: '整理教室', description: '', amount: 200, icon: 'star', sortOrder: 50, active: true, showToStudents: true })
+    const [tx] = await w.teacher.adjust({ uids: [w.byAccount('s01').uid], kind: 'add', amount: p.amount, title: p.name, note: '', presetId: p.id })
+    await expectCode(s1.deletePreset(p.id), 'PERMISSION_DENIED')
+    await w.teacher.deletePreset(p.id)
+    expect((await w.teacher.listPresets()).some((x) => x.id === p.id)).toBe(false)
+    await eventually(async () => expect((await s1.listVisiblePresets()).some((x) => x.id === p.id)).toBe(false))
+    const seen = await s1.getTransaction(tx.id)
+    expect(seen.title).toBe('整理教室')
+    expect(await w.balanceOf('s01')).toBe(200)
+    await expectCode(w.teacher.deletePreset(p.id), 'NOT_FOUND')
+  })
+})
+
 describe('資料保存', () => {
   it('匯出資料不含密碼雜湊', async () => {
     const w = await makeWorld(1)
@@ -136,9 +154,9 @@ describe('資料保存', () => {
     expect(dump).not.toContain('salt')
   })
 
-  it('沒有任何刪除交易的操作介面（帳本只增不刪）；唯一的刪除操作是刪除學生帳號', async () => {
+  it('沒有任何刪除交易的操作介面（帳本只增不刪）；刪除操作只有學生帳號與加點項目', async () => {
     const w = await makeWorld(1)
     const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(w.teacher))
-    expect(methods.filter((m) => /delete|remove/i.test(m))).toEqual(['deleteStudents'])
+    expect(methods.filter((m) => /delete|remove/i.test(m)).sort()).toEqual(['deletePreset', 'deleteStudents'])
   })
 })

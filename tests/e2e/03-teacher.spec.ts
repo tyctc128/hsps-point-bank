@@ -111,6 +111,12 @@ test('小確幸：老師新增並顯示於前台 → 學生即時看到；隱藏
 
   await page.getByTestId('preset-item').filter({ hasText: '當一天小老師' }).getByLabel('顯示於前台').uncheck()
   await expect(s.getByTestId('perk').filter({ hasText: '當一天小老師' })).toHaveCount(0)
+
+  // 刪除項目
+  await page.getByTestId('preset-item').filter({ hasText: '當一天小老師' }).getByTestId('preset-delete').click()
+  await dialogOk(page, '刪除')
+  await expect(page.getByText('已刪除「當一天小老師」')).toBeVisible()
+  await expect(page.getByTestId('preset-item').filter({ hasText: '當一天小老師' })).toHaveCount(0)
 })
 
 test('儀表板與分組管理畫面', async ({ page }) => {

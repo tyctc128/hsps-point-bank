@@ -580,6 +580,15 @@ export class MockApi implements BankApi {
     })
   }
 
+  async deletePreset(id: string): Promise<void> {
+    await this.net(() => undefined)
+    this.store.transact((s) => {
+      this.teacher(s)
+      if (!s.presets[id]) throw new BankError('NOT_FOUND', '找不到這個項目')
+      delete s.presets[id]
+    })
+  }
+
   // ------------------------------------------------------------------ 教師：分組
   async saveGroup(g: Omit<Group, 'id'> & { id?: string }): Promise<Group> {
     await this.net(() => undefined)

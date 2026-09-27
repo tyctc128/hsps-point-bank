@@ -874,6 +874,16 @@ export class FirebaseApi implements BankApi {
     })
   }
 
+  async deletePreset(id: string): Promise<void> {
+    return this.net(async () => {
+      this.requireTeacher()
+      await this.wait('presets')
+      if (!this.cache.presets.has(id)) throw new BankError('NOT_FOUND', '找不到這個項目')
+      await deleteDoc(this.ref('presets', id))
+      this.applyLocal('presets', id, null)
+    })
+  }
+
   async saveGroup(g: Omit<Group, 'id'> & { id?: string }): Promise<Group> {
     return this.net(async () => {
       this.requireTeacher()

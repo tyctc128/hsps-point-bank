@@ -4,7 +4,7 @@ import { api } from '../../api'
 import { useLive } from '../../ui/live'
 import type { Preset } from '../../domain/types'
 import { DESCRIPTION_MAX, formatPoints, parseAmount, validateAmount } from '../../domain/money'
-import { errorMessage, toast } from '../../ui/feedback'
+import { confirmDialog, errorMessage, toast } from '../../ui/feedback'
 import Icon from '../../components/Icon.vue'
 
 const presets = useLive(() => api.listPresets())
@@ -39,6 +39,19 @@ async function save() {
     toast.ok('已儲存')
   } catch (e) { error.value = errorMessage(e) }
 }
+async function remove(p: Preset) {
+  const ok = await confirmDialog({
+    title: `刪除「${p.name}」？`,
+    message: '刪除後老師的加扣點按鈕與學生的小確幸頁都不會再出現這個項目。\n已經發生的交易紀錄不受影響（仍顯示原本的項目名稱）。\n\n只是暫時不用的話，可以改為取消「啟用」。',
+    okText: '刪除', danger: true,
+  })
+  if (!ok) return
+  try {
+    await api.deletePreset(p.id)
+    toast.ok(`已刪除「${p.name}」`)
+  } catch (e) { toast.error(e) }
+}
+
 async function quick(p: Preset, patch: Partial<Preset>) {
   try { await api.savePreset({ ...p, ...patch }) } catch (e) { toast.error(e) }
 }
@@ -77,7 +90,10 @@ async function move(list: Preset[], i: number, dir: -1 | 1) {
             <button class="btn sm ghost" type="button" aria-label="上移" :disabled="i === 0" @click="move(sec.list, i, -1)">▲</button>
             <button class="btn sm ghost" type="button" aria-label="下移" :disabled="i === sec.list.length - 1" @click="move(sec.list, i, 1)">▼</button>
           </div>
-          <button class="btn sm" type="button" @click="openEdit(p)"><Icon name="edit" :size="16" />編輯</button>
+          <div class="col" style="gap: 4px">
+            <button class="btn sm" type="button" @click="openEdit(p)"><Icon name="edit" :size="16" />編輯</button>
+            <button class="btn sm danger" type="button" data-testid="preset-delete" @click="remove(p)"><Icon name="x" :size="16" />刪除</button>
+          </div>
         </div>
         <p v-if="presets.data.value && !sec.list.length" class="empty">還沒有項目</p>
       </section>

@@ -142,6 +142,8 @@ export interface BankApi {
 
   listPresets(): Promise<Preset[]>
   savePreset(p: Omit<Preset, 'id'> & { id?: string }): Promise<Preset>
+  /** 刪除加點項目 / 小確幸；已發生的交易保留原本的項目名稱，不受影響 */
+  deletePreset(id: string): Promise<void>
 
   saveGroup(g: Omit<Group, 'id'> & { id?: string }): Promise<Group>
   assignGroup(uid: string, groupId: string | null): Promise<void>
