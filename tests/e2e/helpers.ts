@@ -99,7 +99,11 @@ export async function balanceOn(page: Page): Promise<string> {
 export async function fillPayCode(page: Page, code: string) {
   const input = page.getByTestId('pay-code')
   const chip = page.getByRole('button', { name: '輸入代碼' })
-  await expect(input.or(chip).first()).toBeVisible()
-  if (!(await input.isVisible())) await chip.click()
+  // 偵測鏡頭期間畫面可能隨時切換：重試直到輸入框出現
+  await expect(async () => {
+    if (await input.isVisible()) return
+    if (await chip.isVisible()) await chip.click({ timeout: 1000 }).catch(() => {})
+    await expect(input).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 30_000 })
   await input.fill(code)
 }
