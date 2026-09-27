@@ -82,11 +82,7 @@ test('同一個收款碼不能用兩次；不能付款給自己', async ({ page,
   const code = (await payee.getByTestId('receive-code').getAttribute('data-code'))!
 
   // 自己的收款碼
-  const self = await context.newPage()
-  await self.goto('/#/login')
-  await self.getByLabel('帳號').fill('e03')
-  await self.getByLabel('密碼').fill('pass1234')
-  await self.getByRole('button', { name: '登入' }).click()
+  const self = await openAs(context, 'e03') // 等登入完成（回到首頁）後才前往付款頁
   await self.goto('/#/pay')
   await fillPayCode(self, code)
   await self.getByRole('button', { name: '下一步' }).click()
