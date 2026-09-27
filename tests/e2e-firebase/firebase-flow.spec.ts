@@ -75,7 +75,7 @@ test('Firebase：教師登入 → 匯入名冊 → 批次加點 → 兩台裝置
   await dialogOk(page, '發放')
   await expect(page.getByText(/已發放：4 人/)).toBeVisible()
   await payee.goto('/#/')
-  await expect(payee.getByTestId('balance')).toHaveText('1,700') // 林一在第 1 組，冠軍 +500
+  await expect(payee.getByTestId('balance')).toHaveText('4,200') // 林一在第 1 組，冠軍 +3,000（預設）
 
   // 停用與刪除帳號：被刪除的學生立即被登出，無法再登入
   await page.goto('/#/t/students')

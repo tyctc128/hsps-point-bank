@@ -136,6 +136,6 @@ export const STATUS_LABEL: Record<TxStatus, string> = {
 export const DEFAULT_SETTINGS: Settings = {
   className: 'HSPS 班級',
   codeTtlMinutes: 3,
-  championAmount: 500,
+  championAmount: 3000,
   runnerUpAmount: 300,
 }

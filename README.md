@@ -35,6 +35,7 @@
 | `npm run admin -- restore <備份檔> --yes` | 將資料完全還原成備份時的狀態（不加 --yes 只預覽） |
 | `npm run admin -- status` | 帳號與交易數量 |
 | `npm run admin -- deploy-rules` | 發布 `firestore.rules` |
+| `npm run admin -- set-settings --champion 3000` | 修改系統設定（小組冠軍 / 亞軍預設點數、收款碼有效時間、班級名稱） |
 | `npm run admin -- init-teacher --name 導師` | 建立 / 重設教師帳號（新密碼寫入 teacher-account.txt） |
 
 ## 開發與測試

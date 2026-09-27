@@ -7,6 +7,7 @@
 //   npm run admin -- restore <備份檔> --yes
 //   npm run admin -- status
 //   npm run admin -- deploy-rules
+//   npm run admin -- set-settings [--champion 3000] [--runner 300] [--ttl 3] [--class 班級名稱]
 import * as fs from 'node:fs'
 import * as XLSX from 'xlsx'
 import { parseRoster } from '../src/domain/roster'
@@ -29,7 +30,8 @@ function usage() {
   npm run admin -- backup [資料夾]                                   備份全部資料為 JSON（預設 backups/）
   npm run admin -- restore <備份檔> [--yes]                          將資料完全還原成備份時的狀態（不加 --yes 只顯示差異）
   npm run admin -- status                                           顯示帳號與交易數量
-  npm run admin -- deploy-rules                                     發布 firestore.rules 權限規則`)
+  npm run admin -- deploy-rules                                     發布 firestore.rules 權限規則
+  npm run admin -- set-settings [--champion N] [--runner N] [--ttl 分鐘] [--class 名稱]   修改系統設定（小組冠軍/亞軍預設點數等）`)
 }
 
 async function main() {
@@ -83,6 +85,25 @@ async function main() {
         const dir = args[1] && !args[1].startsWith('--') ? args[1] : 'backups'
         const file = await backup(ctx, dir, label)
         console.log(`✔ 已備份到 ${file}`)
+        break
+      }
+      case 'set-settings': {
+        const ref = ctx.db.doc('settings/app')
+        const cur = (await ref.get()).data() ?? {}
+        const next: Record<string, unknown> = { ...cur }
+        const num = (name: string, key: string, min: number, max: number) => {
+          const v = flag(name)
+          if (v === undefined) return
+          const n = Number(v)
+          if (!Number.isInteger(n) || n < min || n > max) throw new Error(`--${name} 必須是 ${min}～${max} 的整數`)
+          next[key] = n
+        }
+        num('champion', 'championAmount', 1, 1_000_000)
+        num('runner', 'runnerUpAmount', 1, 1_000_000)
+        num('ttl', 'codeTtlMinutes', 1, 10)
+        if (flag('class')) next.className = flag('class')!.slice(0, 20)
+        await ref.set(next)
+        console.log(`✔ 系統設定：冠軍每人 ${next.championAmount}、亞軍每人 ${next.runnerUpAmount}、收款碼 ${next.codeTtlMinutes} 分鐘、班級「${next.className}」`)
         break
       }
       case 'deploy-rules': {
