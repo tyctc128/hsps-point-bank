@@ -130,10 +130,15 @@ onMounted(async () => {
   }
   try {
     const { default: QrScanner } = await import('qr-scanner')
-    hasCamera.value = await QrScanner.hasCamera()
+    // 部分裝置偵測鏡頭可能一直沒有回應：最多等 2.5 秒，否則改用輸入代碼
+    hasCamera.value = await Promise.race([
+      QrScanner.hasCamera(),
+      new Promise<boolean>((r) => setTimeout(() => r(false), 2500)),
+    ])
   } catch {
     hasCamera.value = false
   }
+  if (mode.value !== 'detecting') return // 學生已自行選擇輸入代碼
   if (hasCamera.value && step.value === 'scan') startCamera()
   else mode.value = 'manual'
 })
@@ -154,7 +159,10 @@ onUnmounted(stopCamera)
         <button class="chip" :class="{ on: mode === 'camera' }" type="button" @click="startCamera"><Icon name="camera" :size="16" />掃描 QR 碼</button>
         <button class="chip" :class="{ on: mode === 'manual' }" type="button" @click="useManual"><Icon name="keyboard" :size="16" />輸入代碼</button>
       </div>
-      <p v-if="mode === 'detecting'" class="muted">正在準備相機…</p>
+      <div v-if="mode === 'detecting'" class="row between wrap">
+        <span class="muted">正在準備相機…</span>
+        <button class="chip" type="button" @click="useManual"><Icon name="keyboard" :size="16" />輸入代碼</button>
+      </div>
       <div v-show="mode === 'camera'" class="cam">
         <video ref="video" muted playsinline />
       </div>
