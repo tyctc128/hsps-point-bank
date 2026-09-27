@@ -11,11 +11,11 @@ test('小組獎勵：並列冠軍 + 亞軍 + 請假排除；同日重複提醒�
   await expect(page.getByTestId('runner-group').filter({ hasText: '第 1 組' })).toBeDisabled()
   await page.getByTestId('award-member').filter({ hasText: '黃六' }).click() // 請假
   await expect(page.getByText('冠軍 3 人 ＋ 亞軍 2 人')).toBeVisible()
-  await expect(page.getByText('9,600 點')).toBeVisible()
+  await expect(page.getByText('15,000 點')).toBeVisible()
   await shot(page, '10-group-award')
   await page.getByTestId('award-submit').click()
   await dialogOk(page, '發放')
-  await expect(page.getByText('已發放：5 人，共 9,600 點')).toBeVisible()
+  await expect(page.getByText('已發放：5 人，共 15,000 點')).toBeVisible()
 
   const s1 = await openAs(context, 'e01')
   await expect(s1.getByTestId('balance')).toHaveText('3,000')

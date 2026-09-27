@@ -137,5 +137,5 @@ export const DEFAULT_SETTINGS: Settings = {
   className: 'HSPS 班級',
   codeTtlMinutes: 3,
   championAmount: 3000,
-  runnerUpAmount: 300,
+  runnerUpAmount: 3000,
 }
